@@ -1,0 +1,213 @@
+% University of Edinburgh Formula Student
+% Point-Mass Laptime Simulator
+% Paul Wang, Vehicle Dynamics
+% Fall 2024
+
+
+
+%% Track attributes: Temporary
+% Creates a simple "J-turn" track with a long straight followed by a
+% constant-radius turn
+
+str1len = 500;
+turn1len = 100;
+turn1rad = 60;
+deltaX = 5;
+
+
+straight1 = zeros(2, ((str1len/deltaX)+1));
+straight1(1,:) = 0:deltaX:str1len;
+turn1 = turn1rad * ones(2, ((turn1len/deltaX)+1));
+turn1(1,:) = 0:deltaX:turn1len;
+track1 = [straight1 turn1]; % Assembles a 2 row matrix with distances deltaX units apart on the top row, followed by corresponding radii on the bottom row
+% Note: Potentially useless top row
+
+
+
+%% Expiremental Track Modifications:
+% An easy way to asses the properties of the velocity calculations
+% track1(2,1) = 60;
+% track1(2,2) = 60;
+% track1(2,45) = 150;% If all is working correctly, this should be irrelevant.
+% track1(2,46) = 150;% If all is working correctly, this should be irrelevant.
+% track1(2,47) = 150;% If all is working correctly, this should be irrelevant.
+% track1(2,48) = 15;
+% track1(2,49) = 70;
+% track1(2,4) = 151; % If all is working correctly, this should be irrelevant.
+% track1(2,61) = 7;
+% track1(2,62) = 6;
+% track1(2,63) = 5;
+% track1(2,64) = 6;
+% track1(2,65) = 7;
+
+
+%% Car attributes:
+% Defines maximum values
+ax = 5;
+ay = 3;
+
+%% Work in progress: Use "ax" and "ay" variables above
+% filetable = readtable("Vehicle Profile for PM-LTS.xlsx");
+% file = table2array(filetable(:,2));
+% 
+% Mass = file(1);
+% Cdrag = file(2);
+% Clift = file(3);
+% Area = file(4);
+% rho = file(5);
+% MaxSteering = file(6);
+% EngTorque = file(7);
+% TyreD = file(8);
+% BrakeTorque = file(9);
+% Croll = file(10);
+% CFLong = file(11);
+% CFLat = file(12);
+
+
+% totalz = FzTotal(Mass, Area, rho, 6, Clift, trackIncl, trackBank)
+% totalx = FxTotal
+
+
+
+%% Track configs:
+% Identifies all corners on the track, sorts them into ascending order, and
+% trunkates the matrix.
+
+corners = track1(2,:);
+corners(corners<=0) = NaN;
+[out, idx] = sort(corners);
+corners = [rmmissing(out); idx(1:length(rmmissing(out)))];
+
+
+
+
+
+
+
+
+
+% -----------------------
+%% Velocity Calculations:
+% -----------------------
+
+
+% Creates empty arrays to store minimum speed values for each segment of track
+acceleration_speed = zeros(2,length(track1));
+deceleration_speed = zeros(2,length(track1));
+% Note: Potentially useless bottom row
+
+% For each corner (starting with the slowest corner), the maximum 
+% acceleration velocities for the rest of the track is calculated, allowing 
+% "unrestricted" acceleration. If a slower needed velocity for a track 
+% segment is found, the velocity value for that segment is overwritten. 
+% The process for Deceleration is identical, but starting from the slowest
+% corner going backwards around the track.
+for i=1:length(corners)
+    target_index = corners(2,i);
+
+    for j=1:length(track1)
+
+        % Code for looping (closed) track configuration
+        if target_index-j >= 0
+            dec_index = target_index - j + 1;
+        else
+            dec_index = length(track1) - (j-target_index) + 1;
+        end
+        
+        if target_index+j <= length(track1) + 1
+            acc_index = target_index + j - 1;
+        else
+            acc_index = j + target_index - length(track1) - 1;
+        end
+
+       
+        % Code to ensure array-out-of-bounds errors are caught
+        if dec_index == length(track1)
+            next_index = 1;
+        else
+            next_index = dec_index + 1;
+        end
+
+        if acc_index == 1
+            previous_index = length(track1);
+        else
+            previous_index = acc_index - 1;
+        end
+
+
+        % Stores value for the current velocity mapped to that segment of track
+        old_decel = deceleration_speed(1, dec_index);
+        old_accel = acceleration_speed(1, acc_index);
+
+
+        % DECELERATION
+        if track1(2,dec_index) == 0 % During Straights
+            new_dec = sqrt((deceleration_speed(1, next_index)^2) + 2 * ax * deltaX ); % "Unrestricted" deceleration
+
+            if old_decel == 0 % Slowest corner condition, first time calculation
+                deceleration_speed(1,dec_index) = new_dec;
+            elseif new_dec < old_decel
+                deceleration_speed(1,dec_index) = new_dec; % Update speed if a new minimum speed is required
+            end 
+
+        else % During Corners
+            apex_decel = sqrt(ay * track1(2, dec_index)); % Maximum cornering speed given from radius and ay
+
+            if old_decel == 0
+                deceleration_speed(1, dec_index) = min(apex_decel, sqrt((deceleration_speed(1, next_index)^2) + 2 * ax * deltaX )); % Determine whether it is possible to acheive maximum apex speed given previous speed, or corner is flat out
+            elseif apex_decel < old_decel
+                deceleration_speed(1, dec_index) = apex_decel; % Set maximum allowable speed for the corner
+            end
+
+        end % Deceleration
+
+
+        % ACCELERATION
+        if track1(2, acc_index) == 0 % During Straights
+            new_acc = sqrt((acceleration_speed(1, previous_index)^2) + 2 * ax * deltaX ); % "Unrestricted" acceleration
+
+            if old_accel == 0 % Slowest corner condition, first time calculation
+                acceleration_speed(1, acc_index) = new_acc;
+            elseif new_acc < old_accel
+                acceleration_speed(1, acc_index) = new_acc; % Update speed if a new minimum speed is required
+            end
+
+        else % During Corners
+            apex_accel = sqrt(ay * track1(2, acc_index)); % Maximum cornering speed given from radius and ay
+
+            if old_accel == 0
+                acceleration_speed(1, acc_index) = min(apex_accel, sqrt((acceleration_speed(1, previous_index))^2 + 2 * ax * deltaX )); % Determine whether it is possible to acheive maximum apex speed given previous speed, or corner is flat out
+            elseif apex_accel < old_accel
+                acceleration_speed(1, acc_index) = apex_accel; % Set maximum allowable speed for the corner
+            end
+
+        end % Acceleration
+
+    end % Calculations of the entire track given a corner
+
+end % Corner looper
+
+
+
+
+
+
+%% Final Time Calculations:
+final_speed = min(acceleration_speed,deceleration_speed); % Takes the slowest speed required for each given track segment
+times = deltaX ./ final_speed; % Assumes constant track mesh spacing
+times(:,1) = []; % stores precise time values in a Matrix
+total_time = sum(times, 2);
+total_time(2,:) = []
+
+
+
+%% Plotting:
+hold on
+% plot(acceleration_speed(1,:))
+% plot(deceleration_speed(1,:))
+plot(final_speed(1,:))
+title(['Final Time = ' num2str(total_time) ' seconds'])
+xlabel('Distance Through Lap (m)') 
+ylabel('Forward Velocity (m/s)') 
+% legend({'Accelerating','Braking', 'Final Speed'},'Location','northeast')
+hold off
