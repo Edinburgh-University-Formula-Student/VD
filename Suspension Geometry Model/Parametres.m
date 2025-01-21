@@ -1,0 +1,191 @@
+%% University of Edinburgh Formula Student
+% Suspension Geometry Simulator
+% Paul Wang, Vehicle Dynamics
+% Winter 2024
+
+
+
+clear
+%% VARIABLES
+
+chassis_height = 0.3; %m
+chassis_length = 1.6; %m
+chassis_width = 0.3; %m
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Inboard_TopBack_Pickup_UP = 0.1; %m
+Inboard_TopBack_Pickup_AFT = 0.14; %m
+
+Inboard_TopFront_Pickup_UP = 0.1; %m
+Inboard_TopFront_Pickup_FOR = 0.1; %m
+
+Inboard_BotBack_Pickup_UP = 0.1; %m
+Inboard_BotBack_Pickup_AFT = 0.1; %m
+
+Inboard_BotFront_Pickup_DOWN = 0.1; %m
+Inboard_BotFront_Pickup_FOR = 0.15; %m
+
+TieRod_Pickup_Dist = 0.06; %m
+TieRod_Pickup_FOR_AFT = -0.095; %m Positive for FOR, Negative for AFT
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+% -------------------------
+Ride_Height = 0.15; %m
+Track_Width = 1.45; %m
+Front_Wheelbase = 0.5; %m
+Rear_Wheelbase = 0.5; %m
+
+Wheel_radius = 0.25; %m
+Wheel_width = 0.175; %m
+% ------------------------
+
+OutTop_Pickup_Dist = 0.075; %m
+OutBot_Pickup_Dist = 0.075; %m
+OutTieRod_Pickup_Dist = 0.03; %m
+OutTieRod_Pickup_FOR_AFT = -0.095; %m Positive for FOR, Negative for AFT
+
+
+CAMBER = -2; %DEG
+
+
+
+Shock_Pickup_Height = 0.09; %m
+Bell_CrankL_Height = 0.1; %m
+Bell_CrankL_Top_Length = 0.08; %m 
+Spring_Stiffness = 2000000/10;
+Damping_Coefficient = 10000;
+
+
+
+
+%% BELLCRANK & SHOCK
+
+% plot(A_Arm(:,1), A_Arm(:,2))
+
+Bell_CrankL = [0, 0; Bell_CrankL_Top_Length/2, Bell_CrankL_Height; -Bell_CrankL_Top_Length/2, Bell_CrankL_Height;];
+Bell_CrankL_Internal_Angle = atand((0.5*Bell_CrankL_Top_Length)/Bell_CrankL_Height);
+
+Inboard_Pickup_Height = chassis_height/2+Bell_CrankL_Height; %m
+Cylinder_Length = 0.1; %m
+Piston_Length = 0.1; %m
+Arm_W = 0.025; %m
+ArmHole_R = 0.01; %m
+Arm_Num_Holes = 2;
+
+cyl_x_sec = [0 -Cylinder_Length/2; 1.5/100 -Cylinder_Length/2; 1.5/100 Cylinder_Length/2; 0.75/100 Cylinder_Length/2; 0.75/100 -(Cylinder_Length-0.25)/2; 0 -(Cylinder_Length-0.25)/2];
+piston_x_sec = [0 -Piston_Length/2; 0.75/100 -Piston_Length/2; 0.75/100 Piston_Length/2; 0 Piston_Length/2];
+
+
+%% ROAD PARAMETRES
+Kw = -1e6; %proportional gain
+Dw = -1e5; %derivative gain
+
+
+
+%% PICKUP POINTS
+InBoard_TopL_PickupCOORD = [-Inboard_TopBack_Pickup_AFT, chassis_width/2, Inboard_TopBack_Pickup_UP];
+InBoard_BotL_PickupCOORD = [-Inboard_BotBack_Pickup_AFT, chassis_width/2, -Inboard_BotBack_Pickup_UP];
+InBoard_TopR_PickupCOORD = [Inboard_TopFront_Pickup_FOR, chassis_width/2, Inboard_TopFront_Pickup_UP];
+InBoard_BotR_PickupCOORD = [Inboard_BotFront_Pickup_FOR, chassis_width/2, -Inboard_BotFront_Pickup_DOWN];
+
+InBoard_TopL_PickupCOORD_RIGHT = [Inboard_TopBack_Pickup_AFT, chassis_width/2, Inboard_TopBack_Pickup_UP];
+InBoard_BotL_PickupCOORD_RIGHT = [Inboard_BotBack_Pickup_AFT, chassis_width/2, -Inboard_BotBack_Pickup_UP];
+InBoard_TopR_PickupCOORD_RIGHT = [-Inboard_TopFront_Pickup_FOR, chassis_width/2, Inboard_TopFront_Pickup_UP];
+InBoard_BotR_PickupCOORD_RIGHT = [-Inboard_BotFront_Pickup_FOR, chassis_width/2, -Inboard_BotFront_Pickup_DOWN];
+
+TieRod_PickupCOORD = [TieRod_Pickup_FOR_AFT, chassis_width/2, -TieRod_Pickup_Dist];
+TieRod_PickupCOORD_RIGHT = [-TieRod_Pickup_FOR_AFT, chassis_width/2, -TieRod_Pickup_Dist];
+
+CrankL_PickupCOORD = [0, chassis_width/2, chassis_height/2];
+ShockL_PickupCOORD = [0, 0, chassis_height/2 + Shock_Pickup_Height];
+
+
+%% PISTON NEUTRAL POSITION
+Bell_CrankL_Chassis_Desired_Angle = 20; %DEG
+
+BlueLineLength = sqrt(Shock_Pickup_Height^2 + (chassis_width/2)^2);
+AngleBetweenBlueAndWhiteLine = Bell_CrankL_Chassis_Desired_Angle + atand((0.5*chassis_width)/Shock_Pickup_Height);
+PurpleLineLength = sqrt(  (BlueLineLength^2) + (Bell_CrankL_Height^2) - 2*BlueLineLength*Bell_CrankL_Height*cosd(AngleBetweenBlueAndWhiteLine) );
+PistonL_Neutral_Displacement = PurpleLineLength - (Piston_Length);
+
+
+%% CAMBER & RIDEHEIGHT
+
+
+BottomCamberPurpleLength = sqrt( (Wheel_radius - OutBot_Pickup_Dist)^2 + (0.5*Wheel_width)^2 );
+BottomCamberRedLength = (Wheel_radius - OutBot_Pickup_Dist)/cosd(CAMBER);
+BottomCamberPhi = atand((0.5*Wheel_width)/(Wheel_radius - OutBot_Pickup_Dist));
+BottomCamberBeta = abs(CAMBER - BottomCamberPhi);
+BottomCamberWhiteLength = sqrt( (BottomCamberPurpleLength)^2 + (BottomCamberRedLength)^2 - 2*BottomCamberPurpleLength*BottomCamberRedLength*cosd(BottomCamberBeta));
+BottomCamberBlueLength = BottomCamberWhiteLength * cosd(CAMBER) * sign(CAMBER - BottomCamberPhi);
+
+
+
+Bot_Length = sqrt( (Track_Width/2-chassis_width/2+BottomCamberBlueLength)^2  +  (abs( (Ride_Height + chassis_height/2 - Inboard_BotBack_Pickup_UP)  -  (Wheel_radius - OutBot_Pickup_Dist)*(1/cosd(CAMBER))  ))^2     );
+BotL_Length = sqrt( (Inboard_BotBack_Pickup_AFT)^2 + (Bot_Length)^2 );
+[BotL_Arm] = Extr_Data_LinkHoles(BotL_Length, Arm_W, ArmHole_R, Arm_Num_Holes);
+
+% ------------------------------------------------
+
+
+BotR_Length = sqrt( (Inboard_BotFront_Pickup_FOR)^2 + (Bot_Length)^2 );
+[BotR_Arm] = Extr_Data_LinkHoles(BotR_Length, Arm_W, ArmHole_R, Arm_Num_Holes);
+
+Angle_LeftBot_Internal = atand(Inboard_BotBack_Pickup_AFT/Bot_Length);
+Angle_RightBot_Internal = atand(Inboard_BotFront_Pickup_FOR/Bot_Length);
+Angle_Bot_AOA = atand( (Inboard_BotBack_Pickup_UP-Inboard_BotFront_Pickup_DOWN)/(Inboard_BotFront_Pickup_FOR+Inboard_BotBack_Pickup_AFT) );
+
+Angle_Between_Bot_Arms = Angle_LeftBot_Internal + Angle_RightBot_Internal;
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+TopCamberPurpleLength = sqrt( (Wheel_radius + OutTop_Pickup_Dist)^2 + (0.5*Wheel_width)^2 );
+TopCamberRedLength = (Wheel_radius + OutTop_Pickup_Dist)/cosd(CAMBER);
+TopCamberPhi = atand((0.5*Wheel_width)/(Wheel_radius + OutTop_Pickup_Dist));
+TopCamberBeta = abs(CAMBER - TopCamberPhi);
+TopCamberWhiteLength = sqrt( (TopCamberPurpleLength)^2 + (TopCamberRedLength)^2 - 2*TopCamberPurpleLength*TopCamberRedLength*cosd(TopCamberBeta));
+TopCamberBlueLength = TopCamberWhiteLength * cosd(CAMBER) * sign(CAMBER - TopCamberPhi);
+
+
+Top_Length = sqrt( (Track_Width/2-chassis_width/2+TopCamberBlueLength)^2  +  (abs( (Ride_Height + chassis_height/2 + Inboard_TopBack_Pickup_UP)  -  (Wheel_radius + OutTop_Pickup_Dist)*(1/cosd(CAMBER))  ))^2     );
+TopL_Length = sqrt( (Inboard_TopBack_Pickup_AFT)^2 + (Top_Length)^2 );
+[TopL_Arm] = Extr_Data_LinkHoles(TopL_Length, Arm_W, ArmHole_R, Arm_Num_Holes);
+
+% --------------------------------------------------
+
+
+TopR_Length = sqrt( (Inboard_TopFront_Pickup_FOR)^2 + (Top_Length)^2 );
+[TopR_Arm] = Extr_Data_LinkHoles(TopR_Length, Arm_W, ArmHole_R, Arm_Num_Holes);
+
+Angle_LeftTop_Internal = atand(Inboard_TopBack_Pickup_AFT/Top_Length);
+Angle_RightTop_Internal = atand(Inboard_TopFront_Pickup_FOR/Top_Length);
+Angle_Top_AOA = atand( (Inboard_TopBack_Pickup_UP-Inboard_TopFront_Pickup_UP)/(Inboard_TopFront_Pickup_FOR+Inboard_TopBack_Pickup_AFT) );
+
+Angle_Between_Top_Arms = Angle_LeftTop_Internal + Angle_RightTop_Internal;
+
+
+
+%% PUSHROD LENGTH
+PurpleAlpha = 90 - Bell_CrankL_Chassis_Desired_Angle - 2*Bell_CrankL_Internal_Angle; %DEG
+PurpleLinePushRod = sqrt(Bell_CrankL_Height^2 + (Bell_CrankL_Top_Length/2)^2); %m
+TealLinePushRod = PurpleLinePushRod * sind(PurpleAlpha);
+YellowLinePushRod = PurpleLinePushRod * cosd(PurpleAlpha);
+BrownLinePushRod = Track_Width/2 - chassis_width/2 - YellowLinePushRod + BottomCamberBlueLength;
+DashedPuplePushRod = Ride_Height - ((Wheel_radius - OutBot_Pickup_Dist)*(1/cosd(CAMBER)));
+PushRod_Length = sqrt( (chassis_height + TealLinePushRod + DashedPuplePushRod)^2 + (BrownLinePushRod)^2 );
+PushRod_x_sec = [0 -PushRod_Length/2; 0.75/100 -PushRod_Length/2; 0.75/100 PushRod_Length/2; 0 PushRod_Length/2];
+
+
+%% TIEROD LENGTH
+TieRodCamberPurpleLength = sqrt( (Wheel_radius - OutTieRod_Pickup_Dist)^2 + (0.5*Wheel_width)^2 );
+TieRodCamberRedLength = (Wheel_radius - OutTieRod_Pickup_Dist)/cosd(CAMBER);
+TieRodCamberPhi = atand((0.5*Wheel_width)/(Wheel_radius - OutTieRod_Pickup_Dist));
+TieRodCamberBeta = abs(CAMBER - TieRodCamberPhi);
+TieRodCamberWhiteLength = sqrt( (TieRodCamberPurpleLength)^2 + (TieRodCamberRedLength)^2 - 2*TieRodCamberPurpleLength*TieRodCamberRedLength*cosd(TieRodCamberBeta));
+TieRodCamberBlueLength = TieRodCamberWhiteLength * cosd(CAMBER) * sign(CAMBER - TieRodCamberPhi);
+
+TieRod2D_Length = sqrt( (Track_Width/2-chassis_width/2+TieRodCamberBlueLength)^2  +  (abs( (Ride_Height + chassis_height/2 - TieRod_Pickup_Dist)  -  (Wheel_radius - TieRod_Pickup_Dist)*(1/cosd(CAMBER))  ))^2     );
+TieRod_Length = sqrt( (OutTieRod_Pickup_FOR_AFT-TieRod_Pickup_FOR_AFT)^2 + (TieRod2D_Length)^2 );
+TieRod_x_sec = [0 -TieRod_Length/2; 0.75/100 -TieRod_Length/2; 0.75/100 TieRod_Length/2; 0 TieRod_Length/2];
