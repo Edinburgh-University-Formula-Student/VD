@@ -19,10 +19,10 @@ Inboard_TopBack_Pickup_AFT = 0.14; %m
 Inboard_TopFront_Pickup_UP = 0.1; %m
 Inboard_TopFront_Pickup_FOR = 0.1; %m
 
-Inboard_BotBack_Pickup_UP = 0.1; %m
+Inboard_BotBack_Pickup_UP = 0.13; %m
 Inboard_BotBack_Pickup_AFT = 0.1; %m
 
-Inboard_BotFront_Pickup_DOWN = 0.1; %m
+Inboard_BotFront_Pickup_DOWN = 0.13; %m
 Inboard_BotFront_Pickup_FOR = 0.15; %m
 
 TieRod_Pickup_Dist = 0.06; %m
@@ -33,7 +33,7 @@ TieRod_Pickup_FOR_AFT = -0.095; %m Positive for FOR, Negative for AFT
 
 % -------------------------
 Ride_Height = 0.15; %m
-Track_Width = 1.45; %m
+Track_Width = 1.65; %m
 Front_Wheelbase = 0.5; %m
 Rear_Wheelbase = 0.5; %m
 
@@ -54,6 +54,7 @@ CAMBER = -2; %DEG, Static Camber at ride height
 TOE = -2; %DEG, Static Toe at ride height
 CASTER = 10; %DEG, Static Caster at ride height
 
+Bell_CrankL_Chassis_Desired_Angle = 20; %DEG
 Shock_Pickup_Height = 0.09; %m
 Bell_CrankL_Height = 0.1; %m
 Bell_CrankL_Top_Length = 0.08; %m 
@@ -106,7 +107,7 @@ ShockL_PickupCOORD = [0, 0, chassis_height/2 + Shock_Pickup_Height];
 
 
 %% PISTON NEUTRAL POSITION
-Bell_CrankL_Chassis_Desired_Angle = 20; %DEG
+
 
 BlueLineLength = sqrt(Shock_Pickup_Height^2 + (chassis_width/2)^2);
 AngleBetweenBlueAndWhiteLine = Bell_CrankL_Chassis_Desired_Angle + atand((0.5*chassis_width)/Shock_Pickup_Height);
@@ -213,4 +214,4 @@ TieRod_x_sec = [0 -TieRod_Length/2; 0.75/100 -TieRod_Length/2; 0.75/100 TieRod_L
 
 
 %% UPRIGHTS
-Scrub_Radius = 0; %m
+Scrub_Offset = -0.05; %m
