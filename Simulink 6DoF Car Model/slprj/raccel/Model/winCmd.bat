@@ -1,0 +1,2 @@
+chcp 65001
+cmd /D /c start "RapidAccelerator" /B "C:\Users\owen\MATLAB\Projects\Vehicle Model New\slprj\raccel\Model\Model.exe" --config "C:\Users\owen\AppData\Local\Temp\raccel_inputp8845dce7_9535_404f_ac64_b9c94dcd6ace.cfg" -server_info_file "C:\Users\owen\AppData\Local\Temp\tpp8845dce7_9535_404f_ac64_b9c94dcd6ace.info" -tgtconn_server_info_file "C:\Users\owen\AppData\Local\Temp\tgtconnp8845dce7_9535_404f_ac64_b9c94dcd6ace.info" -tgtconn_port 0 -port 0 -w >"C:\Users\owen\MATLAB\Projects\Vehicle Model New\slprj\raccel\Model\cmdLog.txt"
