@@ -7,25 +7,27 @@ clear
 close all
 %% GLOBAL SETUP
 
-% Steering_Mode = true;
 Steering_Mode = false;
-
-Travel_Mode = true;
-% Travel_Mode = false;
-
-% Pitch_Mode = true;
+Travel_Mode = false;
 Pitch_Mode = false;
-
-% Roll_Mode = true;
 Roll_Mode = false;
+
+%%%%%%%%%%%%%%%%%%%%%%%
+% Steering_Mode = true;
+% Travel_Mode = true;
+Pitch_Mode = true;
+% Roll_Mode = true;
+%%%%%%%%%%%%%%%%%%%%%%%
 
 chassis_height = 2*207*1/1000; %m
 chassis_length = 1.5; %m
 chassis_width = 0.4; %m
 
-Number_Of_Iterations = 1;
+Number_Of_Iterations = 10;
 Iteration_Step = 0.01; %m
 
+simIn = Simulink.SimulationInput("SGS_3D_1");
+simIn4 = Simulink.SimulationInput("SGS_3D_2_4WHEEL");
 
 
 %% SUSPENSION PICKUP POINT LIMITS
@@ -43,10 +45,10 @@ for i=1:Number_Of_Iterations
 
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    Inboard_TopBack_Pickup_UP = TopArms_Starting_Posiion; %m
+    Inboard_TopBack_Pickup_UP = TopArms_Starting_Posiion - Iteration_Step * i; %m
     Inboard_TopBack_Pickup_AFT = 0.25; %m
 
-    Inboard_TopFront_Pickup_UP = TopArms_Starting_Posiion; %m
+    Inboard_TopFront_Pickup_UP = TopArms_Starting_Posiion - Iteration_Step * i; %m
     Inboard_TopFront_Pickup_FOR = 0.25; %m
 
     Inboard_BotBack_Pickup_DOWN = BottomArms_Dist_Limit; %m
@@ -90,15 +92,15 @@ for i=1:Number_Of_Iterations
 
 
     CAMBER = -2; %DEG, Static Camber at ride height
-    TOE = -2; %DEG, Static Toe at ride height
+    TOE = 0; %DEG, Static Toe at ride height
     CASTER = 0; %DEG, Static Caster at ride height
     KINGPIN = 0; %DEG, Kingpin with respect to tyre rim
-    Scrub_Radius = 0; %m, Scrub radius from steering axis to middle of tyre
+    Scrub_Radius = 0.; %m, Scrub radius from steering axis to middle of tyre
     Scrub_Offset = 0; %m, offset from upright to middle of rim, has no effect on KingPin
 
 
-    Bell_CrankL_Chassis_Desired_Angle = 0; %DEG
-    Shock_Pickup_Height = 0.02; %m
+    Bell_CrankL_Chassis_Desired_Angle = 15; %DEG
+    Shock_Pickup_Height = 0.01; %m
     Bell_CrankL_Height = 0.08; %m
     Bell_CrankL_Top_Length = 0.08; %m
 
@@ -315,62 +317,62 @@ for i=1:Number_Of_Iterations
 
 
 
+    % if Steering_Mode || Travel_Mode
+    %     simIn = Simulink.SimulationInput("SGS_3D_1"); %create object
+    % else
+    %     simIn = Simulink.SimulationInput("SGS_3D_1_4WHEEL"); %create object
+    % end
+    % set_param(bdroot, 'SimulationCommand', 'Update')
+    % out = sim(simIn); %run simulation, all results returned in "out"
+
+
     if Steering_Mode || Travel_Mode
-        simIn = Simulink.SimulationInput("SGS_3D_1"); %create object
+        out = sim(simIn);
     else
-        simIn = Simulink.SimulationInput("SGS_3D_1_4WHEEL"); %create object
+        out = sim(simIn4);
     end
-    set_param(bdroot, 'SimulationCommand', 'Update')
-    out = sim(simIn); %run simulation, all results returned in "out"
 
 
+    timeOutput = out.CTC.time;
     camberOutput = out.CTC.signals(1).values;
     toeOutput = out.CTC.signals(2).values;
     casterOutput = out.CTC.signals(3).values;
-    % diveOutput = out.CTC.signals(4).values;
-    % squatOutput = out.CTC.signals(5).values;
-    % timeOutput = out.tout;
+
+    diveOutput = out.CTC.signals(4).values;
+    squatOutput = out.CTC.signals(5).values;
 
 
 
 
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    %% FIX TIME INDEXING: IT'S THE REASON WHY SOME LINES ARE STUBBY
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 
     %% STEERING
-    % Pi frequency, -pi/4 phase sine wave
+    % Pi frequency, -pi/4 phase sine wave, time 0.750 -> 2.750
     if Steering_Mode == true
+        steering_Time_Index_Start = 76;
+        steering_Time_Index_End = 276;
 
-        steering_camber = camberOutput(136:469);
-        steering_toe = toeOutput(136:469);
-        steering_caster = casterOutput(136:469);
-        steering_toe = steering_toe - steering_toe(1);
+        steering_camber = camberOutput(steering_Time_Index_Start:steering_Time_Index_End);
+        steering_toe = toeOutput(steering_Time_Index_Start:steering_Time_Index_End);
+        steering_caster = casterOutput(steering_Time_Index_Start:steering_Time_Index_End);
+        steering_angle = steering_toe - steering_toe(1);
 
-
+        
 
         hold on
         subplot(1,2,1)
-        plot(steering_toe, steering_camber, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
+        plot(steering_angle, steering_camber, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
+        xline(0, '--')
+        yline(CAMBER, '--')
         xlabel("Steering Angle")
         ylabel("Camber")
         % hold off
 
         hold on
         subplot(1,2,2)
-        plot(steering_toe, steering_caster, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
+        plot(steering_angle, steering_caster, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
+        xline(0, '--')
+        yline(CASTER, '--')
         xlabel("Steering Angle")
         ylabel("Caster")
         % hold off
@@ -380,15 +382,19 @@ for i=1:Number_Of_Iterations
     %% SUSPENSION TRAVEL
     % Pi frequency, -3*pi/4 phase sine wave, 0.03m amplitude, time 0.25 -> 1.25
     if Travel_Mode == true
+        travel_Time_Index_Start = 26;
+        travel_Time_Index_End = 126;
 
-        travel_rideheight = out.CTC.signals(4).values(116:289) + Ride_Height;
-        travel_camber = camberOutput(116:289);
-        travel_toe = toeOutput(116:289);
-        travel_caster = casterOutput(116:289);
+        travel_rideheight = out.CTC.signals(4).values(travel_Time_Index_Start:travel_Time_Index_End) + Ride_Height;
+        travel_camber = camberOutput(travel_Time_Index_Start:travel_Time_Index_End);
+        travel_toe = toeOutput(travel_Time_Index_Start:travel_Time_Index_End);
+        travel_caster = casterOutput(travel_Time_Index_Start:travel_Time_Index_End);
 
         hold on
         subplot(1,3,1)
         plot(travel_rideheight, travel_camber, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
+        xline(Ride_Height, '--')
+        yline(CAMBER, '--')
         grid on
         xlabel("RideHeight Travel")
         ylabel("Camber")
@@ -397,6 +403,8 @@ for i=1:Number_Of_Iterations
         hold on
         subplot(1,3,2)
         plot(travel_rideheight, travel_caster, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
+        xline(Ride_Height, '--')
+        yline(CASTER, '--')
         grid on
         xlabel("RideHeight Travel")
         ylabel("Caster")
@@ -405,6 +413,8 @@ for i=1:Number_Of_Iterations
         hold on
         subplot(1,3,3)
         plot(travel_rideheight, travel_toe, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
+        xline(Ride_Height, '--')
+        yline(TOE, '--')
         grid on
         xlabel("RideHeight Travel")
         ylabel("Toe")
@@ -412,47 +422,74 @@ for i=1:Number_Of_Iterations
 
     end
 
-    % TopR_Length
 
     %% ROLL AND PITCH
     % Pi frequency, -3*pi/4 phase sine wave, 2000 amplitude, time 0.25 -> 1.25
 
-    % if Pitch_Mode
-    %     pitch_camber = camberOutput %(136:469);
-    %     pitch_toe = toeOutput %(136:469);
-    %     pitch_caster = casterOutput %(136:469);
-    %     pitch_dive = diveOutput
-    %     pitch_squat = squatOutput
-    %
-    %     hold on
-    %     subplot(1,3,1)
-    %     plot(travel_rideheight, travel_camber, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
-    %     grid on
-    %     xlabel("RideHeight Travel")
-    %     ylabel("Camber")
-    %     % hold off
-    %
-    %     hold on
-    %     subplot(1,3,2)
-    %     plot(travel_rideheight, travel_caster, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
-    %     grid on
-    %     xlabel("RideHeight Travel")
-    %     ylabel("Caster")
-    %     % hold off
-    %
-    %     hold on
-    %     subplot(1,3,3)
-    %     plot(travel_rideheight, travel_toe, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
-    %     grid on
-    %     xlabel("RideHeight Travel")
-    %     ylabel("Toe")
-    %     % hold off
-    %
-    % end
-    %
-    % if Roll_Mode
-    %
-    % end
+    if Pitch_Mode == true
+        pitch_Time_Index_Start = 26;
+        pitch_Time_Index_End = 126;
+
+
+        pitch_camber = camberOutput(pitch_Time_Index_Start:pitch_Time_Index_End);
+        pitch_toe = toeOutput(pitch_Time_Index_Start:pitch_Time_Index_End);
+        pitch_caster = casterOutput(pitch_Time_Index_Start:pitch_Time_Index_End);
+        pitch_dive = diveOutput(pitch_Time_Index_Start:pitch_Time_Index_End);
+        pitch_squat = squatOutput(pitch_Time_Index_Start:pitch_Time_Index_End);
+
+        hold on
+        subplot(2,3,1)
+        plot(pitch_dive, pitch_camber, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
+        grid on
+        xlabel("Front Rideheight (Dive)")
+        ylabel("Camber")
+        % hold off
+
+        hold on
+        subplot(2,3,2)
+        plot(pitch_dive, pitch_caster, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
+        grid on
+        xlabel("Front Rideheight (Dive)")
+        ylabel("Caster")
+        % hold off
+
+        hold on
+        subplot(2,3,3)
+        plot(pitch_dive, pitch_toe, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
+        grid on
+        xlabel("Front Rideheight (Dive)")
+        ylabel("Toe")
+        % hold off
+
+        hold on
+        subplot(2,3,4)
+        plot(pitch_squat, pitch_camber, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
+        grid on
+        xlabel("Rear Rideheight (Squat)")
+        ylabel("Camber")
+        % hold off
+
+        hold on
+        subplot(2,3,5)
+        plot(pitch_squat, pitch_caster, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
+        grid on
+        xlabel("Rear Rideheight (Squat)")
+        ylabel("Caster")
+        % hold off
+
+        hold on
+        subplot(2,3,6)
+        plot(pitch_squat, pitch_toe, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
+        grid on
+        xlabel("Rear Rideheight (Squat)")
+        ylabel("Toe")
+        % hold off
+
+    end
+
+    if Roll_Mode == true
+
+    end
 
 
 end
