@@ -4,7 +4,8 @@
 % Winter 2024
 
 clear
-% close all
+close all
+set(0,'DefaultFigureWindowStyle','docked')
 %% GLOBAL SETUP
 
 % You want positive camber for inside wheel, slightly negative for outside
@@ -12,16 +13,16 @@ clear
 
 % Ballpark initial static camber = -1.5
 
-Travel_Mode = false;
 Steering_Mode = false;
+Travel_Mode = false;
 Pitch_Mode = false;
 Roll_Mode = false;
 
 %%%%%%%%%%%%%%%%%%%%%%%
 % Steering_Mode = true;
-Travel_Mode = true;
+% Travel_Mode = true;
 % Pitch_Mode = true;
-% Roll_Mode = true;
+Roll_Mode = true;
 %%%%%%%%%%%%%%%%%%%%%%%
 
 chassis_height = 2*207*1/1000; %m
@@ -33,740 +34,994 @@ Track_Width = 1.575; %m
 Front_Wheelbase = 0.55; %m
 Rear_Wheelbase = 0.87; %m
 
-Number_Of_Iterations = 1;
+
+
+Number_Of_Iterations = 4;
 Iteration_Step = 0.02; %m
 
+if Steering_Mode
+    Steering_Slope_Data = zeros(Number_Of_Iterations, Number_Of_Iterations, 4);
+    % (:,:,1) = TopBackArm
+    % (:,:,2) = TopFrontArm
+    % (:,:,3) = CamberSlope
+    % (:,:,4) = CasterSlope
+elseif Travel_Mode
+    Travel_Slope_Data = zeros(Number_Of_Iterations, Number_Of_Iterations, 5);
+    % (:,:,1) = TopBackArm
+    % (:,:,2) = TopFrontArm
+    % (:,:,3) = CamberSlope
+    % (:,:,4) = CasterSlope
+    % (:,:,5) = ToeSlope
+% elseif Pitch_Mode
+%     Pitch_Slope_Data = zeros(Number_Of_Iterations, Number_Of_Iterations, 5);
+%     % (:,:,1) = TopBackArm
+%     % (:,:,2) = TopFrontArm
+%     % (:,:,3) = CamberSlope
+%     % (:,:,4) = CasterSlope
+%     % (:,:,5) = ToeSlope
+elseif Roll_Mode
+    Roll_Slope_Data = zeros(Number_Of_Iterations, Number_Of_Iterations, 5);
+    % (:,:,1) = TopBackArm
+    % (:,:,2) = TopFrontArm
+    % (:,:,3) = CamberSlope
+    % (:,:,4) = CasterSlope
+    % (:,:,5) = ToeSlope
+end
 
 simIn = Simulink.SimulationInput("SGS_3D_1");
 simIn4 = Simulink.SimulationInput("SGS_3D_2_4WHEEL");
 
 
 %% SUSPENSION PICKUP POINT LIMITS
-Plane_Pickup_Angle = 7; %6.634449131; % Deg
+Plane_Pickup_Angle = 7; %6.634449131; % Deg REAL VALUE
 
 BottomArms_Dist_Limit = chassis_height/2;
-TopArms_Starting_Position = -0.06;
+Arms_FOR_AFT_Position = 0.25;
+
+TopArms_Starting_Position = -0.06; % REAL VALUE
+
+
+Height_Of_Suspension_Window = 0.12;
+TopArms_Upper_Bound = TopArms_Starting_Position + Height_Of_Suspension_Window/2;
+TopArms_Lower_Bound = TopArms_Starting_Position - Height_Of_Suspension_Window/2;
+
+TopArms_Veritcal_Iteration_Step = (TopArms_Upper_Bound-TopArms_Lower_Bound)/Number_Of_Iterations;
+Height_Of_Suspension_Window = Height_Of_Suspension_Window - TopArms_Veritcal_Iteration_Step;
+
 RearTopArms_Starting_Position = -0.08;
 
 chassis_rear_width_addition = 0.065; %m
 
-% for l=1:Number_Of_Iterations
-%     for k=1:Number_Of_Iterations
-        for j=1:Number_Of_Iterations
-            for i=1:Number_Of_Iterations
-                disp(string(+j-2) + "/" + string(Number_Of_Iterations^2) + "," + string((i+j-2)/(Number_Of_Iterations^2)))
-                % clearvars -except Steering_Mode Travel_Mode Pitch_Mode Roll_Mode Number_Of_Iterations Iteration_Step i
-                %% VARIABLES
 
+if Travel_Mode
+    CAMBER = -1.5 - 0.21; %DEG, Static Camber at ride height
+    TOE = -2 - 0.35;
+else
+    CAMBER = -1.5;
+    TOE = -2;
+end
+ %DEG, Static Toe at ride height
+CASTER = 5.51; %DEG, Static Caster at ride height, 5.51 Real Value
+KINGPIN = 10; %DEG, Kingpin with respect to tyre rim, 17.478 Real Value
+Scrub_Radius = 0; %m, Scrub radius from steering axis to middle of tyre
+Scrub_Offset = 0; %m, DO NOT CHANGE! offset from upright to middle of rim, has no effect on KingPin
 
-                %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-                Inboard_TopBack_Pickup_UP = TopArms_Starting_Position - Iteration_Step * (i-1); %m
-                Inboard_TopBack_Pickup_AFT = 0.25 - Iteration_Step; %m
-                front_chassis_top_back_offset = tand(Plane_Pickup_Angle) * (chassis_height/2 - abs(Inboard_TopBack_Pickup_UP));
 
-                Inboard_TopFront_Pickup_UP = TopArms_Starting_Position - Iteration_Step * (j-1); %m
-                Inboard_TopFront_Pickup_FOR = 0.25 - Iteration_Step; %m
-                front_chassis_top_front_offset = tand(Plane_Pickup_Angle) * (chassis_height/2 - abs(Inboard_TopFront_Pickup_UP));
+Bell_CrankL_Chassis_Desired_Angle = 15; %DEG
+Shock_Pickup_Height = 0.01; %m
+Bell_CrankL_Height = 0.08; %m
+Bell_CrankL_Top_Length = 0.08; %m
 
-                Inboard_BotBack_Pickup_DOWN = BottomArms_Dist_Limit; %m
-                Inboard_BotBack_Pickup_AFT = 0.25; %m
 
-                Inboard_BotFront_Pickup_DOWN = BottomArms_Dist_Limit; %m
-                Inboard_BotFront_Pickup_FOR = 0.25; %m
+Shock_Pickup_Height_BACK = 0.01; %m
+Bell_CrankL_Pickup_Height_BACK = -0.2; %m
 
-                TieRod_Pickup_Dist = 0.15; %m
-                TieRod_Pickup_FOR_AFT = -0.07555; %m Positive for FOR, Negative for AFT
-                %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-                Inboard_TopBack_Pickup_UP_BACK = RearTopArms_Starting_Position  - Iteration_Step * i; %m
-                Inboard_TopBack_Pickup_AFT_BACK = 0.17; %m
 
-                Inboard_TopFront_Pickup_UP_BACK = RearTopArms_Starting_Position  - Iteration_Step * i; %m
-                Inboard_TopFront_Pickup_FOR_BACK = 0.15; %m
+%% BELLCRANK & SHOCK
 
-                Inboard_BotBack_Pickup_DOWN_BACK = BottomArms_Dist_Limit; %m
-                Inboard_BotBack_Pickup_AFT_BACK = 0.17; %m
+% plot(A_Arm(:,1), A_Arm(:,2))
 
-                Inboard_BotFront_Pickup_DOWN_BACK = BottomArms_Dist_Limit; %m
-                Inboard_BotFront_Pickup_FOR_BACK = 0.15; %m
+Bell_CrankL = [0, 0; Bell_CrankL_Top_Length/2, Bell_CrankL_Height; -Bell_CrankL_Top_Length/2, Bell_CrankL_Height;];
+Bell_CrankL_Internal_Angle = atand((0.5*Bell_CrankL_Top_Length)/Bell_CrankL_Height);
 
-                TieRod_Pickup_Dist_BACK = 0.15; %m
-                TieRod_Pickup_FOR_AFT_BACK = -0.07555; %m Positive for FOR, Negative for AFT
-                %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Inboard_Pickup_Height = chassis_height/2+Bell_CrankL_Height; %m
+Cylinder_Length = 0.15; %m
+Piston_Length = 0.15; %m
+Arm_W = 0.025; %m
+ArmHole_R = 0.01; %m
+Arm_Num_Holes = 2;
 
-                %[innertop(radius, width), innerbottom(radius, -width), outbottom(radius, -width), outtop(radius, width)]
+cyl_x_sec = [0 -Cylinder_Length/2; 1.5/100 -Cylinder_Length/2; 1.5/100 Cylinder_Length/2; 0.75/100 Cylinder_Length/2; 0.75/100 -(Cylinder_Length-0.25)/2; 0 -(Cylinder_Length-0.25)/2];
+piston_x_sec = [0 -Piston_Length/2; 0.75/100 -Piston_Length/2; 0.75/100 Piston_Length/2; 0 Piston_Length/2];
 
-                % -------------------------
+%% PISTON NEUTRAL POSITION
+BlueLineLength = sqrt(Shock_Pickup_Height^2 + (chassis_width/2)^2);
+AngleBetweenBlueAndWhiteLine = Bell_CrankL_Chassis_Desired_Angle + atand((0.5*chassis_width)/Shock_Pickup_Height);
+PurpleLineLength = sqrt(  (BlueLineLength^2) + (Bell_CrankL_Height^2) - 2*BlueLineLength*Bell_CrankL_Height*cosd(AngleBetweenBlueAndWhiteLine) );
+PistonL_Neutral_Displacement = PurpleLineLength - (Piston_Length);
 
+Spring_Stiffness = 350; %LBS/IN = 61294nm REAL VALUE
+Damping_Coefficient = 1000;
 
-                % -------------------------
-                % 0.2057 m
-                Tyre_Wall_Thickness = 3; Tyre_Wall_Thickness = Tyre_Wall_Thickness/39.37; %INCHES; m conversion
-                Rim_Outer_Radius = 5; Rim_Outer_Radius = Rim_Outer_Radius/39.37; %INCHES; m conversion
+% -------------------------
+% 0.2057 m
+Tyre_Wall_Thickness = 3; Tyre_Wall_Thickness = Tyre_Wall_Thickness/39.37; %INCHES; m conversion
+Rim_Outer_Radius = 5; Rim_Outer_Radius = Rim_Outer_Radius/39.37; %INCHES; m conversion
 
-                Wheel_width = 7.5/39.37; %INCHES   %0.213; %m
-                Rim_Thickness = 0.02; %m
+Wheel_width = 7.5/39.37; %INCHES   %0.213; %m
+Rim_Thickness = 0.02; %m
 
-                Wheel_radius = Rim_Outer_Radius+Tyre_Wall_Thickness; %m
-                Rim_x_sec = [Rim_Outer_Radius-Rim_Thickness Wheel_width/2; Rim_Outer_Radius-Rim_Thickness -Wheel_width/2; Rim_Outer_Radius -Wheel_width/2; Rim_Outer_Radius Wheel_width/2];
-                Tyre_x_sec = [Wheel_radius-Tyre_Wall_Thickness Wheel_width/2; Wheel_radius-Tyre_Wall_Thickness -Wheel_width/2; Wheel_radius -Wheel_width/2; Wheel_radius Wheel_width/2];
-                % ------------------------
+Wheel_radius = Rim_Outer_Radius+Tyre_Wall_Thickness; %m
+Rim_x_sec = [Rim_Outer_Radius-Rim_Thickness Wheel_width/2; Rim_Outer_Radius-Rim_Thickness -Wheel_width/2; Rim_Outer_Radius -Wheel_width/2; Rim_Outer_Radius Wheel_width/2];
+Tyre_x_sec = [Wheel_radius-Tyre_Wall_Thickness Wheel_width/2; Wheel_radius-Tyre_Wall_Thickness -Wheel_width/2; Wheel_radius -Wheel_width/2; Wheel_radius Wheel_width/2];
+% ------------------------
 
 
-                OutTop_Pickup_Dist = 0.06948184943; %m REAL VALUE
-                OutBot_Pickup_Dist = 0.07778083697; %m REAL VALUE
+OutTop_Pickup_Dist = 0.06948184943; %m REAL VALUE
+OutBot_Pickup_Dist = 0.07778083697; %m REAL VALUE
 
-                OutTieRod_Pickup_Dist = 0.02117; %m REAL VALUE
-                OutTieRod_Pickup_FOR_AFT = -0.07555; %m Positive for FOR, Negative for AFT REAL VALUE
+OutTieRod_Pickup_Dist = 0.02117; %m REAL VALUE
+OutTieRod_Pickup_FOR_AFT = -0.07555; %m Positive for FOR, Negative for AFT REAL VALUE
 
+%% EXPERIMENTAL
+% outboardZ = Wheel_radius/cosd(CAMBER) - (Wheel_radius*tand(CAMBER) - Wheel_width/2)*sind(CAMBER);
+% inboardZ = chassis_height/2 + Ride_Height;
+Tyre_Floor_Plane = -abs(chassis_height/2 + Ride_Height - (Wheel_radius/cosd(CAMBER) - (Wheel_radius*tand(CAMBER) - Wheel_width/2)*sind(CAMBER)));
 
+%% ITERATION
 
-                CAMBER = -1.5; %DEG, Static Camber at ride height
-                TOE = -2; %DEG, Static Toe at ride height
-                CASTER = 5.51; %DEG, Static Caster at ride height, 5.51 Real Value
-                KINGPIN = 0; %DEG, Kingpin with respect to tyre rim, 17.478 Real Value
-                Scrub_Radius = 0; %m, Scrub radius from steering axis to middle of tyre
-                Scrub_Offset = 0; %m, DO NOT CHANGE! offset from upright to middle of rim, has no effect on KingPin
+for j=1:Number_Of_Iterations
+    for i=1:Number_Of_Iterations
+        disp(string((j-1)*Number_Of_Iterations + i-1) + "/" + string(Number_Of_Iterations^2) + ", " + string(((j-1)*Number_Of_Iterations + i-1)/(Number_Of_Iterations^2)) + "%")
+        % clearvars -except Steering_Mode Travel_Mode Pitch_Mode Roll_Mode Number_Of_Iterations Iteration_Step i
+        %% VARIABLES
 
 
-                Bell_CrankL_Chassis_Desired_Angle = 15; %DEG
-                Shock_Pickup_Height = 0.01; %m
-                Bell_CrankL_Height = 0.08; %m
-                Bell_CrankL_Top_Length = 0.08; %m
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        % Inboard_TopBack_Pickup_UP = TopArms_Starting_Position - Iteration_Step * (i-1); %m
+        Inboard_TopBack_Pickup_UP = TopArms_Upper_Bound - TopArms_Veritcal_Iteration_Step * (i-1); %m
+        Inboard_TopBack_Pickup_AFT = Arms_FOR_AFT_Position; %m
+        front_chassis_top_back_offset = tand(Plane_Pickup_Angle) * (chassis_height/2 - abs(Inboard_TopBack_Pickup_UP));
 
+        % Inboard_TopFront_Pickup_UP = TopArms_Starting_Position - Iteration_Step * (j-1); %m
+        Inboard_TopFront_Pickup_UP = TopArms_Upper_Bound - TopArms_Veritcal_Iteration_Step * (j-1);
+        Inboard_TopFront_Pickup_FOR = Arms_FOR_AFT_Position; %m
+        front_chassis_top_front_offset = tand(Plane_Pickup_Angle) * (chassis_height/2 - abs(Inboard_TopFront_Pickup_UP));
 
-                Shock_Pickup_Height_BACK = 0.01; %m
-                Bell_CrankL_Pickup_Height_BACK = -0.2; %m
+        Inboard_BotBack_Pickup_DOWN = BottomArms_Dist_Limit; %m
+        Inboard_BotBack_Pickup_AFT = Arms_FOR_AFT_Position; %m
 
+        Inboard_BotFront_Pickup_DOWN = BottomArms_Dist_Limit; %m
+        Inboard_BotFront_Pickup_FOR = Arms_FOR_AFT_Position; %m
 
-                % if Pitch_Mode || Roll_Mode
-                %     Spring_Stiffness = 20000;
-                % else
-                %     Spring_Stiffness = 20000; %0000/10;
-                % end
-                % Spring_Stiffness = 20000;
-                Spring_Stiffness = 350; %LBS/IN = 61294nm
-                Damping_Coefficient = 1000;
+        TieRod_Pickup_Dist = 0.15; %m
+        TieRod_Pickup_FOR_AFT = -0.07555; %m Positive for FOR, Negative for AFT
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        Inboard_TopBack_Pickup_UP_BACK = RearTopArms_Starting_Position  - Iteration_Step * i; %m
+        Inboard_TopBack_Pickup_AFT_BACK = 0.17; %m
 
+        Inboard_TopFront_Pickup_UP_BACK = RearTopArms_Starting_Position  - Iteration_Step * i; %m
+        Inboard_TopFront_Pickup_FOR_BACK = 0.15; %m
 
+        Inboard_BotBack_Pickup_DOWN_BACK = BottomArms_Dist_Limit; %m
+        Inboard_BotBack_Pickup_AFT_BACK = 0.17; %m
 
+        Inboard_BotFront_Pickup_DOWN_BACK = BottomArms_Dist_Limit; %m
+        Inboard_BotFront_Pickup_FOR_BACK = 0.15; %m
 
+        TieRod_Pickup_Dist_BACK = 0.15; %m
+        TieRod_Pickup_FOR_AFT_BACK = -0.07555; %m Positive for FOR, Negative for AFT
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+        %[innertop(radius, width), innerbottom(radius, -width), outbottom(radius, -width), outtop(radius, width)]
 
+        % -------------------------
 
 
+  
 
 
 
+        % if Travel_Mode
+        %     CAMBER = -1.5 - 0.38; %DEG, Static Camber at ride height
+        % else
+        %     CAMBER = -1.5;
+        % end
+        % TOE = -2; %DEG, Static Toe at ride height
+        % CASTER = 5.51; %DEG, Static Caster at ride height, 5.51 Real Value
+        % KINGPIN = 10; %DEG, Kingpin with respect to tyre rim, 17.478 Real Value
+        % Scrub_Radius = 0; %m, Scrub radius from steering axis to middle of tyre
+        % Scrub_Offset = 0; %m, DO NOT CHANGE! offset from upright to middle of rim, has no effect on KingPin
+        % 
+        % 
+        % Bell_CrankL_Chassis_Desired_Angle = 15; %DEG
+        % Shock_Pickup_Height = 0.01; %m
+        % Bell_CrankL_Height = 0.08; %m
+        % Bell_CrankL_Top_Length = 0.08; %m
+        % 
+        % 
+        % Shock_Pickup_Height_BACK = 0.01; %m
+        % Bell_CrankL_Pickup_Height_BACK = -0.2; %m
+        % 
+        % 
+        % Spring_Stiffness = 350; %LBS/IN = 61294nm REAL VALUE
+        % Damping_Coefficient = 1000;
 
 
 
 
 
 
-                %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-                %% COMPUTATION & CALCULATION %%
-                %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
-                %% BELLCRANK & SHOCK
 
-                % plot(A_Arm(:,1), A_Arm(:,2))
 
-                Bell_CrankL = [0, 0; Bell_CrankL_Top_Length/2, Bell_CrankL_Height; -Bell_CrankL_Top_Length/2, Bell_CrankL_Height;];
-                Bell_CrankL_Internal_Angle = atand((0.5*Bell_CrankL_Top_Length)/Bell_CrankL_Height);
 
-                Inboard_Pickup_Height = chassis_height/2+Bell_CrankL_Height; %m
-                Cylinder_Length = 0.15; %m
-                Piston_Length = 0.15; %m
-                Arm_W = 0.025; %m
-                ArmHole_R = 0.01; %m
-                Arm_Num_Holes = 2;
 
-                cyl_x_sec = [0 -Cylinder_Length/2; 1.5/100 -Cylinder_Length/2; 1.5/100 Cylinder_Length/2; 0.75/100 Cylinder_Length/2; 0.75/100 -(Cylinder_Length-0.25)/2; 0 -(Cylinder_Length-0.25)/2];
-                piston_x_sec = [0 -Piston_Length/2; 0.75/100 -Piston_Length/2; 0.75/100 Piston_Length/2; 0 Piston_Length/2];
 
 
 
-                %% PICKUP POINTS
-                InBoard_TopL_PickupCOORD = [-Inboard_TopBack_Pickup_AFT, chassis_width/2+front_chassis_top_back_offset, Inboard_TopBack_Pickup_UP];
-                InBoard_BotL_PickupCOORD = [-Inboard_BotBack_Pickup_AFT, chassis_width/2, -Inboard_BotBack_Pickup_DOWN];
-                InBoard_TopR_PickupCOORD = [Inboard_TopFront_Pickup_FOR, chassis_width/2+front_chassis_top_front_offset, Inboard_TopFront_Pickup_UP];
-                InBoard_BotR_PickupCOORD = [Inboard_BotFront_Pickup_FOR, chassis_width/2, -Inboard_BotFront_Pickup_DOWN];
 
-                InBoard_TopL_PickupCOORD_RIGHT = [Inboard_TopBack_Pickup_AFT, chassis_width/2+front_chassis_top_back_offset, Inboard_TopBack_Pickup_UP];
-                InBoard_BotL_PickupCOORD_RIGHT = [Inboard_BotBack_Pickup_AFT, chassis_width/2, -Inboard_BotBack_Pickup_DOWN];
-                InBoard_TopR_PickupCOORD_RIGHT = [-Inboard_TopFront_Pickup_FOR, chassis_width/2+front_chassis_top_front_offset, Inboard_TopFront_Pickup_UP];
-                InBoard_BotR_PickupCOORD_RIGHT = [-Inboard_BotFront_Pickup_FOR, chassis_width/2, -Inboard_BotFront_Pickup_DOWN];
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %% COMPUTATION & CALCULATION %%
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-                InBoard_TopL_PickupCOORD_BACK = [-Inboard_TopBack_Pickup_AFT_BACK, chassis_width/2, Inboard_TopBack_Pickup_UP_BACK];
-                InBoard_BotL_PickupCOORD_BACK = [-Inboard_BotBack_Pickup_AFT_BACK, chassis_width/2, -Inboard_BotBack_Pickup_DOWN_BACK];
-                InBoard_TopR_PickupCOORD_BACK = [Inboard_TopFront_Pickup_FOR_BACK, chassis_width/2, Inboard_TopFront_Pickup_UP_BACK];
-                InBoard_BotR_PickupCOORD_BACK = [Inboard_BotFront_Pickup_FOR_BACK, chassis_width/2, -Inboard_BotFront_Pickup_DOWN_BACK];
-
-                InBoard_TopL_PickupCOORD_RIGHT_BACK = [Inboard_TopBack_Pickup_AFT_BACK, chassis_width/2, Inboard_TopBack_Pickup_UP_BACK];
-                InBoard_BotL_PickupCOORD_RIGHT_BACK = [Inboard_BotBack_Pickup_AFT_BACK, chassis_width/2, -Inboard_BotBack_Pickup_DOWN_BACK];
-                InBoard_TopR_PickupCOORD_RIGHT_BACK = [-Inboard_TopFront_Pickup_FOR_BACK, chassis_width/2, Inboard_TopFront_Pickup_UP_BACK];
-                InBoard_BotR_PickupCOORD_RIGHT_BACK = [-Inboard_BotFront_Pickup_FOR_BACK, chassis_width/2, -Inboard_BotFront_Pickup_DOWN_BACK];
-
-
-                TieRod_PickupCOORD = [TieRod_Pickup_FOR_AFT, chassis_width/2, -TieRod_Pickup_Dist];
-                TieRod_PickupCOORD_RIGHT = [-TieRod_Pickup_FOR_AFT, chassis_width/2, -TieRod_Pickup_Dist];
-
-                TieRod_PickupCOORD_BACK = [TieRod_Pickup_FOR_AFT, chassis_width/2, -TieRod_Pickup_Dist];
-                TieRod_PickupCOORD_RIGHT_BACK = [-TieRod_Pickup_FOR_AFT, chassis_width/2, -TieRod_Pickup_Dist];
-
-                CrankL_PickupCOORD = [0, chassis_width/2, chassis_height/2];
-                ShockL_PickupCOORD = [0, 0, chassis_height/2 + Shock_Pickup_Height];
-
-                CrankL_PickupCOORD_BACK = [0, chassis_width/2, chassis_height/2 + Bell_CrankL_Pickup_Height_BACK];
-                ShockL_PickupCOORD_BACK = [0, 0, chassis_height/2 + Shock_Pickup_Height_BACK + Bell_CrankL_Pickup_Height_BACK];
-
-
-                %% PISTON NEUTRAL POSITION
-                BlueLineLength = sqrt(Shock_Pickup_Height^2 + (chassis_width/2)^2);
-                AngleBetweenBlueAndWhiteLine = Bell_CrankL_Chassis_Desired_Angle + atand((0.5*chassis_width)/Shock_Pickup_Height);
-                PurpleLineLength = sqrt(  (BlueLineLength^2) + (Bell_CrankL_Height^2) - 2*BlueLineLength*Bell_CrankL_Height*cosd(AngleBetweenBlueAndWhiteLine) );
-                PistonL_Neutral_Displacement = PurpleLineLength - (Piston_Length);
-
-                %% CASTER
-                OLDOutTop_Pickup_Dist = OutTop_Pickup_Dist;
-                OutTop_Pickup_Dist = cosd(CASTER) * OutTop_Pickup_Dist;
-                OutTop_Pickup_FOR_AFT = sind(CASTER) * OutTop_Pickup_Dist * sign(CASTER);
-
-                OLDOutBot_Pickup_Dist = OutBot_Pickup_Dist;
-                OutBot_Pickup_Dist = cosd(CASTER) * OutBot_Pickup_Dist;
-                OutBot_Pickup_FOR_AFT = -1 * sind(CASTER) * OutBot_Pickup_Dist * sign(CASTER);
-
-                %% KingPin
-                OutTop_KingPin_Offset = -1* (Scrub_Radius + tand(KINGPIN)*(Wheel_radius+OutTop_Pickup_Dist));
-                OutBot_KingPin_Offset = -1* (Scrub_Radius + tand(KINGPIN)*(Wheel_radius-OutBot_Pickup_Dist));
-
-
-                %% CAMBER & RIDEHEIGHT
-               % 
-               %  %% TOP BACK/LEFT FRONT
-               %  TB_OutboardY = OutTop_KingPin_Offset*cosd(CAMBER) - OutTop_Pickup_FOR_AFT*sind(TOE) + cosd(CAMBER)*((Wheel_radius + OutTop_Pickup_Dist) * tand(CAMBER) - Wheel_width/2);
-               %  TB_InboardY = chassis_width/2 + front_chassis_top_back_offset;
-               %  TB_DeltaY = Track_Width/2 - abs(TB_OutboardY - TB_InboardY);
-               % 
-               %  TB_OutboardX = OutTop_Pickup_FOR_AFT*cosd(TOE)*sign(CASTER) + OutTop_KingPin_Offset*sind(CAMBER);
-               %  TB_InboardX = Inboard_TopBack_Pickup_AFT;
-               %  TB_DeltaX = abs(TB_OutboardX - TB_InboardX);
-               % 
-               %  TB_OutboardZ = (Wheel_radius + OutTop_Pickup_Dist)/cosd(CAMBER) - ((Wheel_radius + OutTop_Pickup_Dist)*tand(CAMBER) - Wheel_width/2)*sind(CAMBER) + OutTop_KingPin_Offset*sind(CAMBER);
-               %  TB_InboardZ = chassis_height/2 + Inboard_TopBack_Pickup_UP + Ride_Height;
-               %  TB_DeltaZ = abs(TB_OutboardZ - TB_InboardZ);
-               % 
-               %  TopL_Length = sqrt( (TB_DeltaX)^2 + (TB_DeltaY)^2 + (TB_DeltaZ)^2 );
-               %  [TopL_Arm] = Extr_Data_LinkHoles(TopL_Length, Arm_W, ArmHole_R, Arm_Num_Holes);
-               % 
-               %  %% TOP FRONT/RIGHT FRONT
-               %  TF_OutboardY = OutTop_KingPin_Offset*cosd(CAMBER) - OutTop_Pickup_FOR_AFT*sind(TOE) + cosd(CAMBER)*((Wheel_radius + OutTop_Pickup_Dist) * tand(CAMBER) - Wheel_width/2);
-               %  TF_InboardY = chassis_width/2 + front_chassis_top_front_offset;
-               %  TF_DeltaY = Track_Width/2 - abs(TF_OutboardY - TF_InboardY);
-               % 
-               %  TF_OutboardX = -OutTop_Pickup_FOR_AFT*cosd(TOE)*sign(CASTER) + OutTop_KingPin_Offset*sind(CAMBER);
-               %  TF_InboardX = Inboard_TopFront_Pickup_FOR;
-               %  TF_DeltaX = abs(TF_OutboardX - TF_InboardX);
-               % 
-               %  TF_OutboardZ = (Wheel_radius + OutTop_Pickup_Dist)/cosd(CAMBER) - ((Wheel_radius + OutTop_Pickup_Dist)*tand(CAMBER) - Wheel_width/2)*sind(CAMBER) + OutTop_KingPin_Offset*sind(CAMBER);
-               %  TF_InboardZ = chassis_height/2 + Inboard_TopFront_Pickup_UP + Ride_Height;
-               %  TF_DeltaZ = abs(TF_OutboardZ - TF_InboardZ);
-               % 
-               %  TopR_Length = sqrt( (TF_DeltaX)^2 + (TF_DeltaY)^2 + (TF_DeltaZ)^2 );
-               %  [TopR_Arm] = Extr_Data_LinkHoles(TopR_Length, Arm_W, ArmHole_R, Arm_Num_Holes);
-               % 
-               %  %% BOT FRONT/RIGHT FRONT
-               %  BF_OutboardY = OutBot_KingPin_Offset*cosd(CAMBER) - OutBot_Pickup_FOR_AFT*sind(TOE) + cosd(CAMBER)*((Wheel_radius - OutBot_Pickup_Dist) * tand(CAMBER) - Wheel_width/2);
-               %  BF_InboardY = chassis_width/2;
-               %  BF_DeltaY = Track_Width/2 - abs(BF_OutboardY - BF_InboardY);
-               % 
-               %  BF_OutboardX = -OutBot_Pickup_FOR_AFT*cosd(TOE)*sign(CASTER) + OutBot_KingPin_Offset*sind(CAMBER);
-               %  BF_InboardX = Inboard_BotFront_Pickup_FOR;
-               %  BF_DeltaX = abs(BF_OutboardX - BF_InboardX);
-               % 
-               %  BF_OutboardZ = (Wheel_radius - OutBot_Pickup_Dist)/cosd(CAMBER) - ((Wheel_radius - OutBot_Pickup_Dist)*tand(CAMBER) - Wheel_width/2)*sind(CAMBER) + OutBot_KingPin_Offset*sind(CAMBER);
-               %  BF_InboardZ = chassis_height/2 - Inboard_BotFront_Pickup_DOWN + Ride_Height;
-               %  BF_DeltaZ = abs(BF_OutboardZ - BF_InboardZ);
-               % 
-               %  BotR_Length = sqrt( (BF_DeltaX)^2 + (BF_DeltaY)^2 + (BF_DeltaZ)^2 );
-               %  [BotR_Arm] = Extr_Data_LinkHoles(BotR_Length, Arm_W, ArmHole_R, Arm_Num_Holes);
-               % 
-               % %% BOT BACK/LEFT FRONT
-               %  BB_OutboardY = OutBot_KingPin_Offset*cosd(CAMBER) - OutBot_Pickup_FOR_AFT*sind(TOE) + cosd(CAMBER)*((Wheel_radius - OutBot_Pickup_Dist) * tand(CAMBER) - Wheel_width/2);
-               %  BB_InboardY = chassis_width/2;
-               %  BB_DeltaY = Track_Width/2 - abs(BB_OutboardY - BB_InboardY);
-               % 
-               %  BB_OutboardX = OutBot_Pickup_FOR_AFT*cosd(TOE)*sign(CASTER) + OutBot_KingPin_Offset*sind(CAMBER);
-               %  BB_InboardX = Inboard_BotBack_Pickup_AFT;
-               %  BB_DeltaX = abs(BB_OutboardX - BB_InboardX);
-               % 
-               %  BB_OutboardZ = (Wheel_radius - OutBot_Pickup_Dist)/cosd(CAMBER) - ((Wheel_radius - OutBot_Pickup_Dist)*tand(CAMBER) - Wheel_width/2)*sind(CAMBER) + OutBot_KingPin_Offset*sind(CAMBER);
-               %  BB_InboardZ = chassis_height/2 - Inboard_BotBack_Pickup_DOWN + Ride_Height;
-               %  BB_DeltaZ = abs(BB_OutboardZ - BB_InboardZ);
-               % 
-               %  BotL_Length = sqrt( (BB_DeltaX)^2 + (BB_DeltaY)^2 + (BB_DeltaZ)^2 );
-               %  [BotL_Arm] = Extr_Data_LinkHoles(BotL_Length, Arm_W, ArmHole_R, Arm_Num_Holes);
-               % 
-               % 
-               %  %% ANGLES
-               %  Angle_LeftTop_Internal = atand(TB_DeltaX/TB_DeltaY);
-               %  Angle_RightTop_Internal = atand(TF_DeltaX/TF_DeltaY);
-               %  Angle_Top_AOA = atand( (Inboard_TopBack_Pickup_UP-Inboard_TopFront_Pickup_UP)/(Inboard_TopFront_Pickup_FOR+Inboard_TopBack_Pickup_AFT) );
-               %  Angle_Between_Top_Arms = Angle_LeftTop_Internal + Angle_RightTop_Internal;
-               % 
-               % 
-               %  Angle_LeftBot_Internal = atand(BB_DeltaX/BB_DeltaY);
-               %  Angle_RightBot_Internal = atand(BF_DeltaX/BF_DeltaY);
-               %  Angle_Bot_AOA = atand( (Inboard_BotBack_Pickup_DOWN-Inboard_BotFront_Pickup_DOWN)/(Inboard_BotFront_Pickup_FOR+Inboard_BotBack_Pickup_AFT) );
-               %  Angle_Between_Bot_Arms = Angle_LeftBot_Internal + Angle_RightBot_Internal;
-
-                %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% NEW
-                BottomCamberPurpleLength = sqrt( (Wheel_radius - OutBot_Pickup_Dist)^2 + (0.5*Wheel_width)^2 );
-                BottomCamberRedLength = (Wheel_radius - OutBot_Pickup_Dist)/cosd(CAMBER);
-                BottomCamberPhi = atand((0.5*Wheel_width)/(Wheel_radius - OutBot_Pickup_Dist));
-                BottomCamberBeta = abs(CAMBER - BottomCamberPhi);
-                BottomCamberWhiteLength = sqrt( (BottomCamberPurpleLength)^2 + (BottomCamberRedLength)^2 - 2*BottomCamberPurpleLength*BottomCamberRedLength*cosd(BottomCamberBeta));
-                BottomCamberBlueLength = BottomCamberWhiteLength * cosd(CAMBER) * sign(CAMBER - BottomCamberPhi);
-                BottomCamberGreenLength = BottomCamberWhiteLength * sind(CAMBER) * sign(CAMBER - BottomCamberPhi);
-                
-                %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% OLD
-              
-                % LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL %
-                Bot_Length = sqrt( (Track_Width/2-chassis_width/2+BottomCamberBlueLength+OutBot_KingPin_Offset)^2  +  (abs( (Ride_Height + chassis_height/2 - Inboard_BotBack_Pickup_DOWN)  -  (Wheel_radius - OutBot_Pickup_Dist + BottomCamberGreenLength)  ))^2     );
-                BotL_Length = sqrt( (Inboard_BotBack_Pickup_AFT - OutBot_Pickup_FOR_AFT)^2 + (Bot_Length)^2 );
-                [BotL_Arm] = Extr_Data_LinkHoles(BotL_Length, Arm_W, ArmHole_R, Arm_Num_Holes);
-
-                % BBBBBBBB
-                BottomCamberPurpleLength_BACK = sqrt( (Wheel_radius - OutBot_Pickup_Dist)^2 + (0.5*Wheel_width)^2 );
-                BottomCamberRedLength_BACK = (Wheel_radius - OutBot_Pickup_Dist)/cosd(CAMBER);
-                BottomCamberPhi_BACK = atand((0.5*Wheel_width)/(Wheel_radius - OutBot_Pickup_Dist));
-                BottomCamberBeta_BACK = abs(CAMBER - BottomCamberPhi_BACK);
-                BottomCamberWhiteLength_BACK = sqrt( (BottomCamberPurpleLength_BACK)^2 + (BottomCamberRedLength_BACK)^2 - 2*BottomCamberPurpleLength_BACK*BottomCamberRedLength_BACK*cosd(BottomCamberBeta_BACK));
-                BottomCamberBlueLength_BACK = BottomCamberWhiteLength_BACK * cosd(CAMBER) * sign(CAMBER - BottomCamberPhi_BACK);
-                BottomCamberGreenLength_BACK = BottomCamberWhiteLength_BACK * sind(CAMBER) * sign(CAMBER - BottomCamberPhi_BACK);
-                BotL2D_Length_BACK = sqrt( (Track_Width/2-chassis_rear_width_addition-chassis_width/2+BottomCamberBlueLength+OutBot_KingPin_Offset)^2  +  (abs( (Ride_Height + chassis_height/2 - Inboard_BotBack_Pickup_DOWN_BACK)  -  (Wheel_radius - OutBot_Pickup_Dist + BottomCamberGreenLength)  ))^2     );
-                BotR2D_Length_BACK = sqrt( (Track_Width/2-chassis_rear_width_addition-chassis_width/2+BottomCamberBlueLength+OutBot_KingPin_Offset)^2  +  (abs( (Ride_Height + chassis_height/2 - Inboard_BotFront_Pickup_DOWN_BACK)  -  (Wheel_radius - OutBot_Pickup_Dist + BottomCamberGreenLength)  ))^2     );
-                BotL_Length_BACK = sqrt( (Inboard_BotBack_Pickup_AFT_BACK - OutBot_Pickup_FOR_AFT)^2 + (BotL2D_Length_BACK)^2 );
-                [BotL_Arm_BACK] = Extr_Data_LinkHoles(BotL_Length_BACK, Arm_W, ArmHole_R, Arm_Num_Holes);
-
-                % RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR %
-                BotR_Length = sqrt( (Inboard_BotFront_Pickup_FOR + OutBot_Pickup_FOR_AFT)^2 + (Bot_Length)^2 );
-                [BotR_Arm] = Extr_Data_LinkHoles(BotR_Length, Arm_W, ArmHole_R, Arm_Num_Holes);
-
-                % BBBBBBBB
-                BotR_Length_BACK = sqrt( (Inboard_BotFront_Pickup_FOR_BACK + OutBot_Pickup_FOR_AFT)^2 + (BotR2D_Length_BACK)^2 );
-                [BotR_Arm_BACK] = Extr_Data_LinkHoles(BotR_Length_BACK, Arm_W, ArmHole_R, Arm_Num_Holes);
-
-
-
-
-
-                %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-                TopCamberPurpleLength = sqrt( (Wheel_radius + OutTop_Pickup_Dist)^2 + (0.5*Wheel_width)^2 );
-                TopCamberRedLength = (Wheel_radius + OutTop_Pickup_Dist)/cosd(CAMBER);
-                TopCamberPhi = atand((0.5*Wheel_width)/(Wheel_radius + OutTop_Pickup_Dist));
-                TopCamberBeta = abs(CAMBER - TopCamberPhi);
-                TopCamberWhiteLength = sqrt( (TopCamberPurpleLength)^2 + (TopCamberRedLength)^2 - 2*TopCamberPurpleLength*TopCamberRedLength*cosd(TopCamberBeta));
-                TopCamberBlueLength = TopCamberWhiteLength * cosd(CAMBER) * sign(CAMBER - TopCamberPhi);
-                TopCamberGreenLength = TopCamberWhiteLength * sind(CAMBER) * sign(CAMBER - TopCamberPhi);
-
-                % LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL %
-                TopL2D_Length = sqrt( (Track_Width/2-chassis_width/2-front_chassis_top_back_offset+TopCamberBlueLength+OutTop_KingPin_Offset)^2  +  (abs( (Ride_Height + chassis_height/2 + Inboard_TopBack_Pickup_UP)  -  (Wheel_radius + OutTop_Pickup_Dist + TopCamberGreenLength )  ))^2     );
-                TopR2D_Length = sqrt( (Track_Width/2-chassis_width/2-front_chassis_top_front_offset+TopCamberBlueLength+OutTop_KingPin_Offset)^2  +  (abs( (Ride_Height + chassis_height/2 + Inboard_TopBack_Pickup_UP)  -  (Wheel_radius + OutTop_Pickup_Dist + TopCamberGreenLength )  ))^2     );
-                TopL2D_Length_BACK = sqrt( (Track_Width/2-chassis_rear_width_addition-chassis_width/2+TopCamberBlueLength+OutTop_KingPin_Offset)^2  +  (abs( (Ride_Height + chassis_height/2 + Inboard_TopBack_Pickup_UP_BACK)  -  (Wheel_radius + OutTop_Pickup_Dist + TopCamberGreenLength )  ))^2     );
-                TopR2D_Length_BACK = sqrt( (Track_Width/2-chassis_rear_width_addition-chassis_width/2+TopCamberBlueLength+OutTop_KingPin_Offset)^2  +  (abs( (Ride_Height + chassis_height/2 + Inboard_TopFront_Pickup_UP_BACK)  -  (Wheel_radius + OutTop_Pickup_Dist + TopCamberGreenLength )  ))^2     );
 
 
-                TopL_Length = sqrt( (Inboard_TopBack_Pickup_AFT - OutTop_Pickup_FOR_AFT)^2 + (TopL2D_Length)^2 );
-                [TopL_Arm] = Extr_Data_LinkHoles(TopL_Length, Arm_W, ArmHole_R, Arm_Num_Holes);
 
-                % BBBBBBBB
-                TopL_Length_BACK = sqrt( (Inboard_TopBack_Pickup_AFT_BACK - OutTop_Pickup_FOR_AFT)^2 + (TopL2D_Length_BACK)^2 );
-                [TopL_Arm_BACK] = Extr_Data_LinkHoles(TopL_Length_BACK, Arm_W, ArmHole_R, Arm_Num_Holes);
+        %% PICKUP POINTS
+        InBoard_TopL_PickupCOORD = [-Inboard_TopBack_Pickup_AFT, chassis_width/2+front_chassis_top_back_offset, Inboard_TopBack_Pickup_UP];
+        InBoard_BotL_PickupCOORD = [-Inboard_BotBack_Pickup_AFT, chassis_width/2, -Inboard_BotBack_Pickup_DOWN];
+        InBoard_TopR_PickupCOORD = [Inboard_TopFront_Pickup_FOR, chassis_width/2+front_chassis_top_front_offset, Inboard_TopFront_Pickup_UP];
+        InBoard_BotR_PickupCOORD = [Inboard_BotFront_Pickup_FOR, chassis_width/2, -Inboard_BotFront_Pickup_DOWN];
 
-                % RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR %
-                TopR_Length = sqrt( (Inboard_TopFront_Pickup_FOR + OutTop_Pickup_FOR_AFT)^2 + (TopR2D_Length)^2 ); %- 0.016;
-                [TopR_Arm] = Extr_Data_LinkHoles(TopR_Length, Arm_W, ArmHole_R, Arm_Num_Holes);
+        InBoard_TopL_PickupCOORD_RIGHT = [Inboard_TopBack_Pickup_AFT, chassis_width/2+front_chassis_top_back_offset, Inboard_TopBack_Pickup_UP];
+        InBoard_BotL_PickupCOORD_RIGHT = [Inboard_BotBack_Pickup_AFT, chassis_width/2, -Inboard_BotBack_Pickup_DOWN];
+        InBoard_TopR_PickupCOORD_RIGHT = [-Inboard_TopFront_Pickup_FOR, chassis_width/2+front_chassis_top_front_offset, Inboard_TopFront_Pickup_UP];
+        InBoard_BotR_PickupCOORD_RIGHT = [-Inboard_BotFront_Pickup_FOR, chassis_width/2, -Inboard_BotFront_Pickup_DOWN];
 
-                % BBBBBBBB
-                TopR_Length_BACK = sqrt( (Inboard_TopFront_Pickup_FOR_BACK + OutTop_Pickup_FOR_AFT)^2 + (TopR2D_Length_BACK)^2 ); %- 0.016;
-                [TopR_Arm_BACK] = Extr_Data_LinkHoles(TopR_Length_BACK, Arm_W, ArmHole_R, Arm_Num_Holes);
+        InBoard_TopL_PickupCOORD_BACK = [-Inboard_TopBack_Pickup_AFT_BACK, chassis_width/2, Inboard_TopBack_Pickup_UP_BACK];
+        InBoard_BotL_PickupCOORD_BACK = [-Inboard_BotBack_Pickup_AFT_BACK, chassis_width/2, -Inboard_BotBack_Pickup_DOWN_BACK];
+        InBoard_TopR_PickupCOORD_BACK = [Inboard_TopFront_Pickup_FOR_BACK, chassis_width/2, Inboard_TopFront_Pickup_UP_BACK];
+        InBoard_BotR_PickupCOORD_BACK = [Inboard_BotFront_Pickup_FOR_BACK, chassis_width/2, -Inboard_BotFront_Pickup_DOWN_BACK];
 
-                Angle_LeftBot_Internal = atand((Inboard_BotBack_Pickup_AFT + OutBot_Pickup_FOR_AFT)/Bot_Length);
-                Angle_RightBot_Internal = atand((Inboard_BotFront_Pickup_FOR + OutBot_Pickup_FOR_AFT)/Bot_Length);
-                Angle_Bot_AOA = atand( (Inboard_BotBack_Pickup_DOWN-Inboard_BotFront_Pickup_DOWN)/(Inboard_BotFront_Pickup_FOR+Inboard_BotBack_Pickup_AFT) );
-                Angle_Between_Bot_Arms = Angle_LeftBot_Internal + Angle_RightBot_Internal;
+        InBoard_TopL_PickupCOORD_RIGHT_BACK = [Inboard_TopBack_Pickup_AFT_BACK, chassis_width/2, Inboard_TopBack_Pickup_UP_BACK];
+        InBoard_BotL_PickupCOORD_RIGHT_BACK = [Inboard_BotBack_Pickup_AFT_BACK, chassis_width/2, -Inboard_BotBack_Pickup_DOWN_BACK];
+        InBoard_TopR_PickupCOORD_RIGHT_BACK = [-Inboard_TopFront_Pickup_FOR_BACK, chassis_width/2, Inboard_TopFront_Pickup_UP_BACK];
+        InBoard_BotR_PickupCOORD_RIGHT_BACK = [-Inboard_BotFront_Pickup_FOR_BACK, chassis_width/2, -Inboard_BotFront_Pickup_DOWN_BACK];
 
-                Angle_LeftTop_Internal = atand((Inboard_TopBack_Pickup_AFT + OutTop_Pickup_FOR_AFT)/TopL2D_Length);
-                Angle_RightTop_Internal = atand((Inboard_TopFront_Pickup_FOR + OutTop_Pickup_FOR_AFT)/TopR2D_Length);
-                Angle_Top_AOA = atand( (Inboard_TopBack_Pickup_UP-Inboard_TopFront_Pickup_UP)/(Inboard_TopFront_Pickup_FOR+Inboard_TopBack_Pickup_AFT) );
-                Angle_Between_Top_Arms = Angle_LeftTop_Internal + Angle_RightTop_Internal;
 
+        TieRod_PickupCOORD = [TieRod_Pickup_FOR_AFT, chassis_width/2, -TieRod_Pickup_Dist];
+        TieRod_PickupCOORD_RIGHT = [-TieRod_Pickup_FOR_AFT, chassis_width/2, -TieRod_Pickup_Dist];
 
+        TieRod_PickupCOORD_BACK = [TieRod_Pickup_FOR_AFT, chassis_width/2, -TieRod_Pickup_Dist];
+        TieRod_PickupCOORD_RIGHT_BACK = [-TieRod_Pickup_FOR_AFT, chassis_width/2, -TieRod_Pickup_Dist];
 
+        CrankL_PickupCOORD = [0, chassis_width/2, chassis_height/2];
+        ShockL_PickupCOORD = [0, 0, chassis_height/2 + Shock_Pickup_Height];
 
-                %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        CrankL_PickupCOORD_BACK = [0, chassis_width/2, chassis_height/2 + Bell_CrankL_Pickup_Height_BACK];
+        ShockL_PickupCOORD_BACK = [0, 0, chassis_height/2 + Shock_Pickup_Height_BACK + Bell_CrankL_Pickup_Height_BACK];
 
-                %% PUSHROD LENGTH
-                PurpleAlpha = 90 - Bell_CrankL_Chassis_Desired_Angle - 2*Bell_CrankL_Internal_Angle; %DEG
-                PurpleLinePushRod = sqrt(Bell_CrankL_Height^2 + (Bell_CrankL_Top_Length/2)^2); %m
-                TealLinePushRod = PurpleLinePushRod * sind(PurpleAlpha);
-                YellowLinePushRod = PurpleLinePushRod * cosd(PurpleAlpha);
-                BrownLinePushRod = Track_Width/2 - chassis_width/2 - YellowLinePushRod + BottomCamberBlueLength + OutBot_KingPin_Offset;
-                DashedPuplePushRod = Ride_Height - ((Wheel_radius - OutBot_Pickup_Dist)*(1/cosd(CAMBER)));
-                PushRod__2D_Length = sqrt( (chassis_height + TealLinePushRod + DashedPuplePushRod)^2 + (BrownLinePushRod)^2 );
 
-                BrownLinePushRod_BACK = Track_Width/2-chassis_rear_width_addition- chassis_width/2 - YellowLinePushRod + BottomCamberBlueLength + OutBot_KingPin_Offset;
-                PushRod__2D_Length_BACK = sqrt( (chassis_height + Bell_CrankL_Pickup_Height_BACK + TealLinePushRod + DashedPuplePushRod)^2 + (BrownLinePushRod_BACK)^2 );
 
-                PushRod_Length = sqrt( (PushRod__2D_Length)^2 + (OutBot_Pickup_FOR_AFT)^2 );
-                PushRod_x_sec = [0 -PushRod_Length/2; 0.75/100 -PushRod_Length/2; 0.75/100 PushRod_Length/2; 0 PushRod_Length/2];
 
-                PushRod_Length_BACK = sqrt( (PushRod__2D_Length_BACK)^2 + (OutBot_Pickup_FOR_AFT)^2 );
-                PushRod_x_sec_BACK = [0 -PushRod_Length_BACK/2; 0.75/100 -PushRod_Length_BACK/2; 0.75/100 PushRod_Length_BACK/2; 0 PushRod_Length_BACK/2];
+        %% CASTER
+        OLDOutTop_Pickup_Dist = OutTop_Pickup_Dist;
+        OutTop_Pickup_Dist = cosd(CASTER) * OutTop_Pickup_Dist;
+        OutTop_Pickup_FOR_AFT = sind(CASTER) * OutTop_Pickup_Dist * sign(CASTER);
 
-                %% TOE & TIEROD LENGTH
-                % TieRodCamberPurpleLength = sqrt( (Wheel_radius - OutTieRod_Pickup_Dist)^2 + (0.5*Wheel_width)^2 );
-                % TieRodCamberRedLength = (Wheel_radius - OutTieRod_Pickup_Dist)/cosd(CAMBER);
-                % TieRodCamberPhi = atand((0.5*Wheel_width)/(Wheel_radius - OutTieRod_Pickup_Dist));
-                % TieRodCamberBeta = abs(CAMBER - TieRodCamberPhi);
-                % TieRodCamberWhiteLength = sqrt( (TieRodCamberPurpleLength)^2 + (TieRodCamberRedLength)^2 - 2*TieRodCamberPurpleLength*TieRodCamberRedLength*cosd(TieRodCamberBeta) );
-                % TieRodCamberBlueLength = TieRodCamberWhiteLength * 1/cosd(CAMBER) * sign(CAMBER - TieRodCamberPhi);
-                %
-                % TieRodToePurpleLength = OutTieRod_Pickup_FOR_AFT*cosd(TOE);
-                % TieRodToeRedLength = OutTieRod_Pickup_FOR_AFT*sind(TOE);
-                %
-                % TieRod2D_Length = sqrt( (Track_Width/2-chassis_width/2+TieRodCamberBlueLength)^2  +  (abs( (Ride_Height + chassis_height/2 - TieRod_Pickup_Dist)  -  (Wheel_radius - TieRod_Pickup_Dist)*(1/cosd(CAMBER))  ))^2     );
-                % TieRod_Length = sqrt( (TieRod2D_Length + TieRodToeRedLength)^2 + (TieRodToePurpleLength -TieRod_Pickup_FOR_AFT)^2 ); %- 0.0021; %-TieRodToeRedLength %- 0.0021;
-                % TieRod_x_sec = [0 -TieRod_Length/2; 0.75/100 -TieRod_Length/2; 0.75/100 TieRod_Length/2; 0 TieRod_Length/2];
+        OLDOutBot_Pickup_Dist = OutBot_Pickup_Dist;
+        OutBot_Pickup_Dist = cosd(CASTER) * OutBot_Pickup_Dist;
+        OutBot_Pickup_FOR_AFT = -1 * sind(CASTER) * OutBot_Pickup_Dist * sign(CASTER);
 
-                TieRod_Inboard_Z = chassis_height/2 - TieRod_Pickup_Dist + Ride_Height;
-                TieRod_Inboard_Z_BACK = chassis_height/2 - TieRod_Pickup_Dist_BACK + Ride_Height;
-                TieRod_Outboard_Z = (Wheel_radius - OutTieRod_Pickup_Dist)*(1/cosd(CAMBER)) + ( (Wheel_radius - OutTieRod_Pickup_Dist)*tand(CAMBER) - Wheel_width/2 ) * sind(CAMBER);
-                TieRod_Delta_Z = TieRod_Inboard_Z - TieRod_Outboard_Z;
-                TieRod_Delta_Z_BACK = TieRod_Inboard_Z_BACK - TieRod_Outboard_Z;
+        %% KingPin
+        OutTop_KingPin_Offset = -1* (Scrub_Radius + tand(KINGPIN)*(Wheel_radius+OutTop_Pickup_Dist));
+        OutBot_KingPin_Offset = -1* (Scrub_Radius + tand(KINGPIN)*(Wheel_radius-OutBot_Pickup_Dist));
 
-                % TieRod_Delta_Z = OutTieRod_Pickup_Dist
 
+        %% CAMBER & RIDEHEIGHT
 
-                TieRod_Inboard_Y = chassis_width/2;
-                TieRod_Outboard_Y = Track_Width/2 + ((Wheel_radius - OutTieRod_Pickup_Dist)*tand(CAMBER) - Wheel_width/2) * (cosd(CAMBER)) - OutTieRod_Pickup_FOR_AFT*sind(TOE);
-                TieRod_Delta_Y = TieRod_Outboard_Y - TieRod_Inboard_Y;
+        %% TOP BACK/LEFT FRONT
+        TB_OutboardY = OutTop_KingPin_Offset*cosd(CAMBER) - OutTop_Pickup_FOR_AFT*sind(TOE) + cosd(CAMBER)*((Wheel_radius + OutTop_Pickup_Dist) * tand(CAMBER) - Wheel_width/2);
+        TB_InboardY = chassis_width/2 + front_chassis_top_back_offset;
+        TB_DeltaY = Track_Width/2 - abs(TB_OutboardY - TB_InboardY);
 
-                TieRod_Delta_X = TieRod_Pickup_FOR_AFT - OutTieRod_Pickup_FOR_AFT*cosd(TOE);
-                TieRod_Delta_X_BACK = TieRod_Pickup_FOR_AFT_BACK - OutTieRod_Pickup_FOR_AFT*cosd(TOE);
+        TB_OutboardX = OutTop_Pickup_FOR_AFT*cosd(TOE)*sign(CASTER) + OutTop_KingPin_Offset*sind(CAMBER);
+        TB_InboardX = Inboard_TopBack_Pickup_AFT;
+        TB_DeltaX = abs(TB_OutboardX - TB_InboardX);
 
-                TieRod_Length = sqrt( (TieRod_Delta_X)^2 + (TieRod_Delta_Y)^2 + (TieRod_Delta_Z)^2 );
-                TieRod_x_sec = [0 -TieRod_Length/2; 0.75/100 -TieRod_Length/2; 0.75/100 TieRod_Length/2; 0 TieRod_Length/2];
+        TB_OutboardZ = (Wheel_radius + OutTop_Pickup_Dist)/cosd(CAMBER) - ((Wheel_radius + OutTop_Pickup_Dist)*tand(CAMBER) - Wheel_width/2)*sind(CAMBER) + OutTop_KingPin_Offset*sind(CAMBER);
+        TB_InboardZ = chassis_height/2 + Inboard_TopBack_Pickup_UP + Ride_Height;
+        TB_DeltaZ = abs(TB_OutboardZ - TB_InboardZ);
 
-                TieRod_Length_BACK = sqrt( (TieRod_Delta_X_BACK)^2 + (TieRod_Delta_Y-chassis_rear_width_addition)^2 + (TieRod_Delta_Z_BACK)^2 );
-                TieRod_x_sec_BACK = [0 -TieRod_Length_BACK/2; 0.75/100 -TieRod_Length_BACK/2; 0.75/100 TieRod_Length_BACK/2; 0 TieRod_Length_BACK/2];
+        TopL_Length = sqrt( (TB_DeltaX)^2 + (TB_DeltaY)^2 + (TB_DeltaZ)^2 );
+        [TopL_Arm] = Extr_Data_LinkHoles(TopL_Length, Arm_W, ArmHole_R, Arm_Num_Holes);
 
+        %% TOP FRONT/RIGHT FRONT
+        TF_OutboardY = OutTop_KingPin_Offset*cosd(CAMBER) - OutTop_Pickup_FOR_AFT*sind(TOE) + cosd(CAMBER)*((Wheel_radius + OutTop_Pickup_Dist) * tand(CAMBER) - Wheel_width/2);
+        TF_InboardY = chassis_width/2 + front_chassis_top_front_offset;
+        TF_DeltaY = Track_Width/2 - abs(TF_OutboardY - TF_InboardY);
 
+        TF_OutboardX = -OutTop_Pickup_FOR_AFT*cosd(TOE)*sign(CASTER) + OutTop_KingPin_Offset*sind(CAMBER);
+        TF_InboardX = Inboard_TopFront_Pickup_FOR;
+        TF_DeltaX = abs(TF_OutboardX - TF_InboardX);
 
+        TF_OutboardZ = (Wheel_radius + OutTop_Pickup_Dist)/cosd(CAMBER) - ((Wheel_radius + OutTop_Pickup_Dist)*tand(CAMBER) - Wheel_width/2)*sind(CAMBER) + OutTop_KingPin_Offset*sind(CAMBER);
+        TF_InboardZ = chassis_height/2 + Inboard_TopFront_Pickup_UP + Ride_Height;
+        TF_DeltaZ = abs(TF_OutboardZ - TF_InboardZ);
 
+        TopR_Length = sqrt( (TF_DeltaX)^2 + (TF_DeltaY)^2 + (TF_DeltaZ)^2 );
+        [TopR_Arm] = Extr_Data_LinkHoles(TopR_Length, Arm_W, ArmHole_R, Arm_Num_Holes);
 
+        %% BOT FRONT/RIGHT FRONT
+        BF_OutboardY = OutBot_KingPin_Offset*cosd(CAMBER) - OutBot_Pickup_FOR_AFT*sind(TOE) + cosd(CAMBER)*((Wheel_radius - OutBot_Pickup_Dist) * tand(CAMBER) - Wheel_width/2);
+        BF_InboardY = chassis_width/2;
+        BF_DeltaY = Track_Width/2 - abs(BF_OutboardY - BF_InboardY);
 
+        BF_OutboardX = -OutBot_Pickup_FOR_AFT*cosd(TOE)*sign(CASTER) + OutBot_KingPin_Offset*sind(CAMBER);
+        BF_InboardX = Inboard_BotFront_Pickup_FOR;
+        BF_DeltaX = abs(BF_OutboardX - BF_InboardX);
 
+        BF_OutboardZ = (Wheel_radius - OutBot_Pickup_Dist)/cosd(CAMBER) - ((Wheel_radius - OutBot_Pickup_Dist)*tand(CAMBER) - Wheel_width/2)*sind(CAMBER) + OutBot_KingPin_Offset*sind(CAMBER);
+        BF_InboardZ = chassis_height/2 - Inboard_BotFront_Pickup_DOWN + Ride_Height;
+        BF_DeltaZ = abs(BF_OutboardZ - BF_InboardZ);
 
-
-
-
-
-
-
-
-
-
-
-
-                %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-                %% SUSPENSION GEOMETREY SIMULATION %%
-                %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-
-
-                % if Steering_Mode || Travel_Mode
-                %     simIn = Simulink.SimulationInput("SGS_3D_1"); %create object
-                % else
-                %     simIn = Simulink.SimulationInput("SGS_3D_1_4WHEEL"); %create object
-                % end
-                % set_param(bdroot, 'SimulationCommand', 'Update')
-                % out = sim(simIn); %run simulation, all results returned in "out"
-
-
-                if Steering_Mode || Travel_Mode
-                    out = sim(simIn);
-                else
-                    out = sim(simIn4);
-                end
-
-
-                timeOutput = out.CTC.time;
-                camberOutput = out.CTC.signals(1).values;
-                toeOutput = out.CTC.signals(2).values;
-                casterOutput = out.CTC.signals(3).values;
-
-
-                if Pitch_Mode || Roll_Mode
-                    diveOutput = out.CTC.signals(4).values;
-                    squatOutput = out.CTC.signals(5).values;
-                end
-
-
-                %% TODO: FIX TOE SENSORS
-                %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-                %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-                %%%%%%%%%%%%%%%%%%%%%%%%%
-                %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-                %%%%%%%%%%%%%
-                %%%%%%%%%%%%%%%%%%%%%%%%
-
-
-
-
-
-                %% STEERING
-                % Pi frequency, -pi/4 phase sine wave, time 0.750 -> 2.750
-                if Steering_Mode == true
-                    steering_Time_Index_Start = 76;
-                    steering_Time_Index_End = 276;
-
-                    steering_camber = camberOutput(steering_Time_Index_Start:steering_Time_Index_End);
-                    steering_toe = toeOutput(steering_Time_Index_Start:steering_Time_Index_End);
-                    steering_caster = casterOutput(steering_Time_Index_Start:steering_Time_Index_End);
-                    steering_angle = steering_toe - steering_toe(1);
-
-
-
-                    hold on
-                    subplot(1,2,1)
-                    plot(steering_angle, steering_camber, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
-                    xline(0, '--')
-                    yline(CAMBER, '--')
-                    xlabel("Steering Angle")
-                    ylabel("Camber")
-                    % hold off
-
-                    hold on
-                    subplot(1,2,2)
-                    plot(steering_angle, steering_caster, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
-                    xline(0, '--')
-                    yline(CASTER, '--')
-                    xlabel("Steering Angle")
-                    ylabel("Caster")
-                    % hold off
-                end
-
-
-                %% SUSPENSION TRAVEL
-                % Pi frequency, -3*pi/4 phase sine wave, 0.03m amplitude, time 0.25 -> 1.25
-                if Travel_Mode == true
-                    travel_Time_Index_Start = 26;
-                    travel_Time_Index_End = 126;
-
-                    travel_rideheight = out.CTC.signals(4).values(travel_Time_Index_Start:travel_Time_Index_End) + Ride_Height;
-                    travel_camber = camberOutput(travel_Time_Index_Start:travel_Time_Index_End);
-                    travel_toe = toeOutput(travel_Time_Index_Start:travel_Time_Index_End);
-                    travel_caster = casterOutput(travel_Time_Index_Start:travel_Time_Index_End);
-
-                    hold on
-                    subplot(1,3,1)
-                    plot(travel_rideheight, travel_camber, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
-                    xline(Ride_Height, '--')
-                    yline(CAMBER, '--')
-                    grid on
-                    xlabel("RideHeight Travel")
-                    ylabel("Camber")
-                    % hold off
-
-                    hold on
-                    subplot(1,3,2)
-                    plot(travel_rideheight, travel_caster, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
-                    xline(Ride_Height, '--')
-                    yline(CASTER, '--')
-                    grid on
-                    xlabel("RideHeight Travel")
-                    ylabel("Caster")
-                    % hold off
-   
-                    hold on
-                    subplot(1,3,3)
-                    plot(travel_rideheight, travel_toe, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
-                    xline(Ride_Height, '--')
-                    yline(TOE, '--')
-                    grid on
-                    xlabel("RideHeight Travel")
-                    ylabel("Toe")
-                    % hold off
-
-                end
-
-                %% TODO: GET REAR CAMBER VS REAR RIDEHEIGHT
-                %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-                %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-                %%%%%%%%%%%%%%%%%%%%%%%%%
-                %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-                %%%%%%%%%%%%%
-                %%%%%%%%%%%%%%%%%%%%%%%%
-
-
-                %% PITCH
-                % Pi frequency, -3*pi/4 phase sine wave, 2000 amplitude, time 3.25 -> 5.25
-
-                if Pitch_Mode == true
-                    pitch_Time_Index_Start = 326;
-                    pitch_Time_Index_End = 526;
-
-
-                    pitch_camber = camberOutput(pitch_Time_Index_Start:pitch_Time_Index_End);
-                    pitch_toe = toeOutput(pitch_Time_Index_Start:pitch_Time_Index_End);
-                    pitch_caster = casterOutput(pitch_Time_Index_Start:pitch_Time_Index_End);
-                    pitch_dive = diveOutput(pitch_Time_Index_Start:pitch_Time_Index_End);
-                    pitch_squat = squatOutput(pitch_Time_Index_Start:pitch_Time_Index_End);
-
-                    hold on
-                    subplot(2,3,1)
-                    plot(pitch_dive, pitch_camber, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
-                    xline(Ride_Height, '--')
-                    yline(CAMBER, '--')
-                    grid on
-                    xlabel("Front Rideheight (Dive)")
-                    ylabel("Camber")
-                    % hold off
-
-                    hold on
-                    subplot(2,3,2)
-                    plot(pitch_dive, pitch_caster, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
-                    xline(Ride_Height, '--')
-                    yline(CASTER, '--')
-                    grid on
-                    xlabel("Front Rideheight (Dive)")
-                    ylabel("Caster")
-                    % hold off
-
-                    hold on
-                    subplot(2,3,3)
-                    plot(pitch_dive, pitch_toe, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
-                    xline(Ride_Height, '--')
-                    yline(TOE, '--')
-                    grid on
-                    xlabel("Front Rideheight (Dive)")
-                    ylabel("Toe")
-                    % hold off
-
-                    hold on
-                    subplot(2,3,4)
-                    plot(pitch_squat, pitch_camber, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
-                    xline(Ride_Height, '--')
-                    yline(CAMBER, '--')
-                    grid on
-                    xlabel("Rear Rideheight (Squat)")
-                    ylabel("Camber")
-                    % hold off
-
-                    hold on
-                    subplot(2,3,5)
-                    plot(pitch_squat, pitch_caster, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
-                    xline(Ride_Height, '--')
-                    yline(CASTER, '--')
-                    grid on
-                    xlabel("Rear Rideheight (Squat)")
-                    ylabel("Caster")
-                    % hold off
-
-                    hold on
-                    subplot(2,3,6)
-                    plot(pitch_squat, pitch_toe, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
-                    xline(Ride_Height, '--')
-                    yline(TOE, '--')
-                    grid on
-                    xlabel("Rear Rideheight (Squat)")
-                    ylabel("Toe")
-                    % hold off
-
-                end
-
-                %% ROLL
-                if Roll_Mode == true
-                    roll_Time_Index_Start = 326;
-                    roll_Time_Index_End = 526;
-
-
-                    roll_camber = camberOutput(roll_Time_Index_Start:roll_Time_Index_End);
-                    roll_toe = toeOutput(roll_Time_Index_Start:roll_Time_Index_End);
-                    roll_caster = casterOutput(roll_Time_Index_Start:roll_Time_Index_End);
-                    roll_dive = diveOutput(roll_Time_Index_Start:roll_Time_Index_End);
-                    roll_squat = squatOutput(roll_Time_Index_Start:roll_Time_Index_End);
-
-                    hold on
-                    subplot(2,3,1)
-                    plot(roll_dive, roll_camber, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
-                    xline(Ride_Height, '--')
-                    yline(CAMBER, '--')
-                    grid on
-                    xlabel("Front Rideheight (Dive)")
-                    ylabel("Camber")
-                    % hold off
-
-                    hold on
-                    subplot(2,3,2)
-                    plot(roll_dive, roll_caster, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
-                    xline(Ride_Height, '--')
-                    yline(CASTER, '--')
-                    grid on
-                    xlabel("Front Rideheight (Dive)")
-                    ylabel("Caster")
-                    % hold off
-
-                    hold on
-                    subplot(2,3,3)
-                    plot(roll_dive, roll_toe, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
-                    xline(Ride_Height, '--')
-                    yline(TOE, '--')
-                    grid on
-                    xlabel("Front Rideheight (Dive)")
-                    ylabel("Toe")
-                    % hold off
-
-                    hold on
-                    subplot(2,3,4)
-                    plot(roll_squat, roll_camber, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
-                    xline(Ride_Height, '--')
-                    yline(CAMBER, '--')
-                    grid on
-                    xlabel("Rear Rideheight (Squat)")
-                    ylabel("Camber")
-                    % hold off
-
-                    hold on
-                    subplot(2,3,5)
-                    plot(roll_squat, roll_caster, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
-                    xline(Ride_Height, '--')
-                    yline(CASTER, '--')
-                    grid on
-                    xlabel("Rear Rideheight (Squat)")
-                    ylabel("Caster")
-                    % hold off
-
-                    hold on
-                    subplot(2,3,6)
-                    plot(roll_squat, roll_toe, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
-                    xline(Ride_Height, '--')
-                    yline(TOE, '--')
-                    grid on
-                    xlabel("Rear Rideheight (Squat)")
-                    ylabel("Toe")
-                    % hold off
-
-                end
-
-
-            end
+        BotR_Length = sqrt( (BF_DeltaX)^2 + (BF_DeltaY)^2 + (BF_DeltaZ)^2 );
+        [BotR_Arm] = Extr_Data_LinkHoles(BotR_Length, Arm_W, ArmHole_R, Arm_Num_Holes);
+
+        %% BOT BACK/LEFT FRONT
+        BB_OutboardY = OutBot_KingPin_Offset*cosd(CAMBER) - OutBot_Pickup_FOR_AFT*sind(TOE) + cosd(CAMBER)*((Wheel_radius - OutBot_Pickup_Dist) * tand(CAMBER) - Wheel_width/2);
+        BB_InboardY = chassis_width/2;
+        BB_DeltaY = Track_Width/2 - abs(BB_OutboardY - BB_InboardY);
+
+        BB_OutboardX = OutBot_Pickup_FOR_AFT*cosd(TOE)*sign(CASTER) + OutBot_KingPin_Offset*sind(CAMBER);
+        BB_InboardX = Inboard_BotBack_Pickup_AFT;
+        BB_DeltaX = abs(BB_OutboardX - BB_InboardX);
+
+        BB_OutboardZ = (Wheel_radius - OutBot_Pickup_Dist)/cosd(CAMBER) - ((Wheel_radius - OutBot_Pickup_Dist)*tand(CAMBER) - Wheel_width/2)*sind(CAMBER) + OutBot_KingPin_Offset*sind(CAMBER);
+        BB_InboardZ = chassis_height/2 - Inboard_BotBack_Pickup_DOWN + Ride_Height;
+        BB_DeltaZ = abs(BB_OutboardZ - BB_InboardZ);
+
+        BotL_Length = sqrt( (BB_DeltaX)^2 + (BB_DeltaY)^2 + (BB_DeltaZ)^2 );
+        [BotL_Arm] = Extr_Data_LinkHoles(BotL_Length, Arm_W, ArmHole_R, Arm_Num_Holes);
+
+        %% REAR ARMS
+                    %% TOP BACK/LEFT REAR
+                    TB_OutboardY_BACK = OutTop_KingPin_Offset*cosd(CAMBER) - OutTop_Pickup_FOR_AFT*sind(TOE) + cosd(CAMBER)*((Wheel_radius + OutTop_Pickup_Dist) * tand(CAMBER) - Wheel_width/2);
+                    TB_InboardY_BACK = chassis_width/2 + chassis_rear_width_addition;
+                    TB_DeltaY_BACK = Track_Width/2 - abs(TB_OutboardY_BACK - TB_InboardY_BACK);
+            
+                    TB_OutboardX_BACK = OutTop_Pickup_FOR_AFT*cosd(TOE)*sign(CASTER) + OutTop_KingPin_Offset*sind(CAMBER);
+                    TB_InboardX_BACK = Inboard_TopBack_Pickup_AFT_BACK;
+                    TB_DeltaX_BACK = abs(TB_OutboardX_BACK - TB_InboardX_BACK);
+            
+                    TB_OutboardZ_BACK = (Wheel_radius + OutTop_Pickup_Dist)/cosd(CAMBER) - ((Wheel_radius + OutTop_Pickup_Dist)*tand(CAMBER) - Wheel_width/2)*sind(CAMBER) + OutTop_KingPin_Offset*sind(CAMBER);
+                    TB_InboardZ_BACK = chassis_height/2 + Inboard_TopBack_Pickup_UP_BACK + Ride_Height;
+                    TB_DeltaZ_BACK = abs(TB_OutboardZ_BACK - TB_InboardZ_BACK);
+            
+                    TopL_Length_BACK = sqrt( (TB_DeltaX_BACK)^2 + (TB_DeltaY_BACK)^2 + (TB_DeltaZ_BACK)^2 );
+                    [TopL_Arm_BACK] = Extr_Data_LinkHoles(TopL_Length_BACK, Arm_W, ArmHole_R, Arm_Num_Holes);
+            
+                    %% TOP FRONT/RIGHT REAR
+                    TF_OutboardY_BACK = OutTop_KingPin_Offset*cosd(CAMBER) - OutTop_Pickup_FOR_AFT*sind(TOE) + cosd(CAMBER)*((Wheel_radius + OutTop_Pickup_Dist) * tand(CAMBER) - Wheel_width/2);
+                    TF_InboardY_BACK = chassis_width/2 + chassis_rear_width_addition;
+                    TF_DeltaY_BACK = Track_Width/2 - abs(TF_OutboardY_BACK - TF_InboardY_BACK);
+            
+                    TF_OutboardX_BACK = -OutTop_Pickup_FOR_AFT*cosd(TOE)*sign(CASTER) + OutTop_KingPin_Offset*sind(CAMBER);
+                    TF_InboardX_BACK = Inboard_TopFront_Pickup_FOR_BACK;
+                    TF_DeltaX_BACK = abs(TF_OutboardX_BACK - TF_InboardX_BACK);
+            
+                    TF_OutboardZ_BACK = (Wheel_radius + OutTop_Pickup_Dist)/cosd(CAMBER) - ((Wheel_radius + OutTop_Pickup_Dist)*tand(CAMBER) - Wheel_width/2)*sind(CAMBER) + OutTop_KingPin_Offset*sind(CAMBER);
+                    TF_InboardZ_BACK = chassis_height/2 + Inboard_TopFront_Pickup_UP_BACK + Ride_Height;
+                    TF_DeltaZ_BACK = abs(TF_OutboardZ_BACK - TF_InboardZ_BACK);
+            
+                    TopR_Length_BACK = sqrt( (TF_DeltaX_BACK)^2 + (TF_DeltaY_BACK)^2 + (TF_DeltaZ_BACK)^2 );
+                    [TopR_Arm_BACK] = Extr_Data_LinkHoles(TopR_Length_BACK, Arm_W, ArmHole_R, Arm_Num_Holes);
+            
+                    %% BOT FRONT/RIGHT REAR
+                    BF_OutboardY_BACK = OutBot_KingPin_Offset*cosd(CAMBER) - OutBot_Pickup_FOR_AFT*sind(TOE) + cosd(CAMBER)*((Wheel_radius - OutBot_Pickup_Dist) * tand(CAMBER) - Wheel_width/2);
+                    BF_InboardY_BACK = chassis_width/2 + chassis_rear_width_addition;
+                    BF_DeltaY_BACK = Track_Width/2 - abs(BF_OutboardY_BACK - BF_InboardY_BACK);
+            
+                    BF_OutboardX_BACK = -OutBot_Pickup_FOR_AFT*cosd(TOE)*sign(CASTER) + OutBot_KingPin_Offset*sind(CAMBER);
+                    BF_InboardX_BACK = Inboard_BotFront_Pickup_FOR_BACK;
+                    BF_DeltaX_BACK = abs(BF_OutboardX_BACK - BF_InboardX_BACK);
+            
+                    BF_OutboardZ_BACK = (Wheel_radius - OutBot_Pickup_Dist)/cosd(CAMBER) - ((Wheel_radius - OutBot_Pickup_Dist)*tand(CAMBER) - Wheel_width/2)*sind(CAMBER) + OutBot_KingPin_Offset*sind(CAMBER);
+                    BF_InboardZ_BACK = chassis_height/2 - Inboard_BotFront_Pickup_DOWN_BACK + Ride_Height;
+                    BF_DeltaZ_BACK = abs(BF_OutboardZ_BACK - BF_InboardZ_BACK);
+            
+                    BotR_Length_BACK = sqrt( (BF_DeltaX_BACK)^2 + (BF_DeltaY_BACK)^2 + (BF_DeltaZ_BACK)^2 );
+                    [BotR_Arm_BACK] = Extr_Data_LinkHoles(BotR_Length_BACK, Arm_W, ArmHole_R, Arm_Num_Holes);
+            
+                    %% BOT BACK/LEFT REAR
+                    BB_OutboardY_BACK = OutBot_KingPin_Offset*cosd(CAMBER) - OutBot_Pickup_FOR_AFT*sind(TOE) + cosd(CAMBER)*((Wheel_radius - OutBot_Pickup_Dist) * tand(CAMBER) - Wheel_width/2);
+                    BB_InboardY_BACK = chassis_width/2 + chassis_rear_width_addition;
+                    BB_DeltaY_BACK = Track_Width/2 - abs(BB_OutboardY_BACK - BB_InboardY_BACK);
+            
+                    BB_OutboardX_BACK = OutBot_Pickup_FOR_AFT*cosd(TOE)*sign(CASTER) + OutBot_KingPin_Offset*sind(CAMBER);
+                    BB_InboardX_BACK = Inboard_BotBack_Pickup_AFT_BACK;
+                    BB_DeltaX_BACK = abs(BB_OutboardX_BACK - BB_InboardX_BACK);
+            
+                    BB_OutboardZ_BACK = (Wheel_radius - OutBot_Pickup_Dist)/cosd(CAMBER) - ((Wheel_radius - OutBot_Pickup_Dist)*tand(CAMBER) - Wheel_width/2)*sind(CAMBER) + OutBot_KingPin_Offset*sind(CAMBER);
+                    BB_InboardZ_BACK = chassis_height/2 - Inboard_BotBack_Pickup_DOWN_BACK + Ride_Height;
+                    BB_DeltaZ_BACK = abs(BB_OutboardZ_BACK - BB_InboardZ_BACK);
+            
+                    BotL_Length_BACK = sqrt( (BB_DeltaX_BACK)^2 + (BB_DeltaY_BACK)^2 + (BB_DeltaZ_BACK)^2 );
+                    [BotL_Arm_BACK] = Extr_Data_LinkHoles(BotL_Length_BACK, Arm_W, ArmHole_R, Arm_Num_Holes);
+
+        %% ANGLES
+        Angle_LeftTop_Internal = atand(TB_DeltaX_BACK/TB_DeltaY_BACK);
+        Angle_RightTop_Internal = atand(TF_DeltaX_BACK/TF_DeltaY_BACK);
+        Angle_Top_AOA = atand( (Inboard_TopBack_Pickup_UP-Inboard_TopFront_Pickup_UP)/(Inboard_TopFront_Pickup_FOR+Inboard_TopBack_Pickup_AFT) );
+        Angle_Between_Top_Arms = Angle_LeftTop_Internal + Angle_RightTop_Internal;
+
+
+        Angle_LeftBot_Internal = atand(BB_DeltaX_BACK/BB_DeltaY_BACK);
+        Angle_RightBot_Internal = atand(BF_DeltaX_BACK/BF_DeltaY_BACK);
+        Angle_Bot_AOA = atand( (Inboard_BotBack_Pickup_DOWN-Inboard_BotFront_Pickup_DOWN)/(Inboard_BotFront_Pickup_FOR+Inboard_BotBack_Pickup_AFT) );
+        Angle_Between_Bot_Arms = Angle_LeftBot_Internal + Angle_RightBot_Internal;
+
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% NEW
+        BottomCamberPurpleLength = sqrt( (Wheel_radius - OutBot_Pickup_Dist)^2 + (0.5*Wheel_width)^2 );
+        BottomCamberRedLength = (Wheel_radius - OutBot_Pickup_Dist)/cosd(CAMBER);
+        BottomCamberPhi = atand((0.5*Wheel_width)/(Wheel_radius - OutBot_Pickup_Dist));
+        BottomCamberBeta = abs(CAMBER - BottomCamberPhi);
+        BottomCamberWhiteLength = sqrt( (BottomCamberPurpleLength)^2 + (BottomCamberRedLength)^2 - 2*BottomCamberPurpleLength*BottomCamberRedLength*cosd(BottomCamberBeta));
+        BottomCamberBlueLength = BottomCamberWhiteLength * cosd(CAMBER) * sign(CAMBER - BottomCamberPhi);
+        BottomCamberGreenLength = BottomCamberWhiteLength * sind(CAMBER) * sign(CAMBER - BottomCamberPhi);
+
+        % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% OLD
+        %
+        % % LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL %
+        % Bot_Length = sqrt( (Track_Width/2-chassis_width/2+BottomCamberBlueLength+OutBot_KingPin_Offset)^2  +  (abs( (Ride_Height + chassis_height/2 - Inboard_BotBack_Pickup_DOWN)  -  (Wheel_radius - OutBot_Pickup_Dist + BottomCamberGreenLength)  ))^2     );
+        % BotL_Length = sqrt( (Inboard_BotBack_Pickup_AFT - OutBot_Pickup_FOR_AFT)^2 + (Bot_Length)^2 );
+        % [BotL_Arm] = Extr_Data_LinkHoles(BotL_Length, Arm_W, ArmHole_R, Arm_Num_Holes);
+        %
+        % % BBBBBBBB
+        % BottomCamberPurpleLength_BACK = sqrt( (Wheel_radius - OutBot_Pickup_Dist)^2 + (0.5*Wheel_width)^2 );
+        % BottomCamberRedLength_BACK = (Wheel_radius - OutBot_Pickup_Dist)/cosd(CAMBER);
+        % BottomCamberPhi_BACK = atand((0.5*Wheel_width)/(Wheel_radius - OutBot_Pickup_Dist));
+        % BottomCamberBeta_BACK = abs(CAMBER - BottomCamberPhi_BACK);
+        % BottomCamberWhiteLength_BACK = sqrt( (BottomCamberPurpleLength_BACK)^2 + (BottomCamberRedLength_BACK)^2 - 2*BottomCamberPurpleLength_BACK*BottomCamberRedLength_BACK*cosd(BottomCamberBeta_BACK));
+        % BottomCamberBlueLength_BACK = BottomCamberWhiteLength_BACK * cosd(CAMBER) * sign(CAMBER - BottomCamberPhi_BACK);
+        % BottomCamberGreenLength_BACK = BottomCamberWhiteLength_BACK * sind(CAMBER) * sign(CAMBER - BottomCamberPhi_BACK);
+        % BotL2D_Length_BACK = sqrt( (Track_Width/2-chassis_rear_width_addition-chassis_width/2+BottomCamberBlueLength+OutBot_KingPin_Offset)^2  +  (abs( (Ride_Height + chassis_height/2 - Inboard_BotBack_Pickup_DOWN_BACK)  -  (Wheel_radius - OutBot_Pickup_Dist + BottomCamberGreenLength)  ))^2     );
+        % BotR2D_Length_BACK = sqrt( (Track_Width/2-chassis_rear_width_addition-chassis_width/2+BottomCamberBlueLength+OutBot_KingPin_Offset)^2  +  (abs( (Ride_Height + chassis_height/2 - Inboard_BotFront_Pickup_DOWN_BACK)  -  (Wheel_radius - OutBot_Pickup_Dist + BottomCamberGreenLength)  ))^2     );
+        % BotL_Length_BACK = sqrt( (Inboard_BotBack_Pickup_AFT_BACK - OutBot_Pickup_FOR_AFT)^2 + (BotL2D_Length_BACK)^2 );
+        % [BotL_Arm_BACK] = Extr_Data_LinkHoles(BotL_Length_BACK, Arm_W, ArmHole_R, Arm_Num_Holes);
+        %
+        % % RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR %
+        % BotR_Length = sqrt( (Inboard_BotFront_Pickup_FOR + OutBot_Pickup_FOR_AFT)^2 + (Bot_Length)^2 );
+        % [BotR_Arm] = Extr_Data_LinkHoles(BotR_Length, Arm_W, ArmHole_R, Arm_Num_Holes);
+        %
+        % % BBBBBBBB
+        % BotR_Length_BACK = sqrt( (Inboard_BotFront_Pickup_FOR_BACK + OutBot_Pickup_FOR_AFT)^2 + (BotR2D_Length_BACK)^2 );
+        % [BotR_Arm_BACK] = Extr_Data_LinkHoles(BotR_Length_BACK, Arm_W, ArmHole_R, Arm_Num_Holes);
+        %
+        %
+        %
+        %
+        %
+        % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %
+        % TopCamberPurpleLength = sqrt( (Wheel_radius + OutTop_Pickup_Dist)^2 + (0.5*Wheel_width)^2 );
+        % TopCamberRedLength = (Wheel_radius + OutTop_Pickup_Dist)/cosd(CAMBER);
+        % TopCamberPhi = atand((0.5*Wheel_width)/(Wheel_radius + OutTop_Pickup_Dist));
+        % TopCamberBeta = abs(CAMBER - TopCamberPhi);
+        % TopCamberWhiteLength = sqrt( (TopCamberPurpleLength)^2 + (TopCamberRedLength)^2 - 2*TopCamberPurpleLength*TopCamberRedLength*cosd(TopCamberBeta));
+        % TopCamberBlueLength = TopCamberWhiteLength * cosd(CAMBER) * sign(CAMBER - TopCamberPhi);
+        % TopCamberGreenLength = TopCamberWhiteLength * sind(CAMBER) * sign(CAMBER - TopCamberPhi);
+        %
+        % % LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL %
+        % TopL2D_Length = sqrt( (Track_Width/2-chassis_width/2-front_chassis_top_back_offset+TopCamberBlueLength+OutTop_KingPin_Offset)^2  +  (abs( (Ride_Height + chassis_height/2 + Inboard_TopBack_Pickup_UP)  -  (Wheel_radius + OutTop_Pickup_Dist + TopCamberGreenLength )  ))^2     );
+        % TopR2D_Length = sqrt( (Track_Width/2-chassis_width/2-front_chassis_top_front_offset+TopCamberBlueLength+OutTop_KingPin_Offset)^2  +  (abs( (Ride_Height + chassis_height/2 + Inboard_TopBack_Pickup_UP)  -  (Wheel_radius + OutTop_Pickup_Dist + TopCamberGreenLength )  ))^2     );
+        % TopL2D_Length_BACK = sqrt( (Track_Width/2-chassis_rear_width_addition-chassis_width/2+TopCamberBlueLength+OutTop_KingPin_Offset)^2  +  (abs( (Ride_Height + chassis_height/2 + Inboard_TopBack_Pickup_UP_BACK)  -  (Wheel_radius + OutTop_Pickup_Dist + TopCamberGreenLength )  ))^2     );
+        % TopR2D_Length_BACK = sqrt( (Track_Width/2-chassis_rear_width_addition-chassis_width/2+TopCamberBlueLength+OutTop_KingPin_Offset)^2  +  (abs( (Ride_Height + chassis_height/2 + Inboard_TopFront_Pickup_UP_BACK)  -  (Wheel_radius + OutTop_Pickup_Dist + TopCamberGreenLength )  ))^2     );
+        %
+        %
+        % TopL_Length = sqrt( (Inboard_TopBack_Pickup_AFT - OutTop_Pickup_FOR_AFT)^2 + (TopL2D_Length)^2 );
+        % [TopL_Arm] = Extr_Data_LinkHoles(TopL_Length, Arm_W, ArmHole_R, Arm_Num_Holes);
+        %
+        % % BBBBBBBB
+        % TopL_Length_BACK = sqrt( (Inboard_TopBack_Pickup_AFT_BACK - OutTop_Pickup_FOR_AFT)^2 + (TopL2D_Length_BACK)^2 );
+        % [TopL_Arm_BACK] = Extr_Data_LinkHoles(TopL_Length_BACK, Arm_W, ArmHole_R, Arm_Num_Holes);
+        %
+        % % RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR %
+        % TopR_Length = sqrt( (Inboard_TopFront_Pickup_FOR + OutTop_Pickup_FOR_AFT)^2 + (TopR2D_Length)^2 ); %- 0.016;
+        % [TopR_Arm] = Extr_Data_LinkHoles(TopR_Length, Arm_W, ArmHole_R, Arm_Num_Holes);
+        %
+        % % BBBBBBBB
+        % TopR_Length_BACK = sqrt( (Inboard_TopFront_Pickup_FOR_BACK + OutTop_Pickup_FOR_AFT)^2 + (TopR2D_Length_BACK)^2 ); %- 0.016;
+        % [TopR_Arm_BACK] = Extr_Data_LinkHoles(TopR_Length_BACK, Arm_W, ArmHole_R, Arm_Num_Holes);
+        %
+        % Angle_LeftBot_Internal = atand((Inboard_BotBack_Pickup_AFT + OutBot_Pickup_FOR_AFT)/Bot_Length);
+        % Angle_RightBot_Internal = atand((Inboard_BotFront_Pickup_FOR + OutBot_Pickup_FOR_AFT)/Bot_Length);
+        % Angle_Bot_AOA = atand( (Inboard_BotBack_Pickup_DOWN-Inboard_BotFront_Pickup_DOWN)/(Inboard_BotFront_Pickup_FOR+Inboard_BotBack_Pickup_AFT) );
+        % Angle_Between_Bot_Arms = Angle_LeftBot_Internal + Angle_RightBot_Internal;
+        %
+        % Angle_LeftTop_Internal = atand((Inboard_TopBack_Pickup_AFT + OutTop_Pickup_FOR_AFT)/TopL2D_Length);
+        % Angle_RightTop_Internal = atand((Inboard_TopFront_Pickup_FOR + OutTop_Pickup_FOR_AFT)/TopR2D_Length);
+        % Angle_Top_AOA = atand( (Inboard_TopBack_Pickup_UP-Inboard_TopFront_Pickup_UP)/(Inboard_TopFront_Pickup_FOR+Inboard_TopBack_Pickup_AFT) );
+        % Angle_Between_Top_Arms = Angle_LeftTop_Internal + Angle_RightTop_Internal;
+        %
+        %
+        %
+        %
+        % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+        %% PUSHROD LENGTH
+        PurpleAlpha = 90 - Bell_CrankL_Chassis_Desired_Angle - 2*Bell_CrankL_Internal_Angle; %DEG
+        PurpleLinePushRod = sqrt(Bell_CrankL_Height^2 + (Bell_CrankL_Top_Length/2)^2); %m
+        TealLinePushRod = PurpleLinePushRod * sind(PurpleAlpha);
+        YellowLinePushRod = PurpleLinePushRod * cosd(PurpleAlpha);
+        BrownLinePushRod = Track_Width/2 - chassis_width/2 - YellowLinePushRod + BottomCamberBlueLength + OutBot_KingPin_Offset;
+        DashedPuplePushRod = Ride_Height - ((Wheel_radius - OutBot_Pickup_Dist)*(1/cosd(CAMBER)));
+        PushRod__2D_Length = sqrt( (chassis_height + TealLinePushRod + DashedPuplePushRod)^2 + (BrownLinePushRod)^2 );
+
+        BrownLinePushRod_BACK = Track_Width/2-chassis_rear_width_addition- chassis_width/2 - YellowLinePushRod + BottomCamberBlueLength + OutBot_KingPin_Offset;
+        PushRod__2D_Length_BACK = sqrt( (chassis_height + Bell_CrankL_Pickup_Height_BACK + TealLinePushRod + DashedPuplePushRod)^2 + (BrownLinePushRod_BACK)^2 );
+
+        PushRod_Length = sqrt( (PushRod__2D_Length)^2 + (OutBot_Pickup_FOR_AFT)^2 );
+        PushRod_x_sec = [0 -PushRod_Length/2; 0.75/100 -PushRod_Length/2; 0.75/100 PushRod_Length/2; 0 PushRod_Length/2];
+
+        PushRod_Length_BACK = sqrt( (PushRod__2D_Length_BACK)^2 + (OutBot_Pickup_FOR_AFT)^2 );
+        PushRod_x_sec_BACK = [0 -PushRod_Length_BACK/2; 0.75/100 -PushRod_Length_BACK/2; 0.75/100 PushRod_Length_BACK/2; 0 PushRod_Length_BACK/2];
+
+        %% TOE & TIEROD LENGTH
+        % TieRodCamberPurpleLength = sqrt( (Wheel_radius - OutTieRod_Pickup_Dist)^2 + (0.5*Wheel_width)^2 );
+        % TieRodCamberRedLength = (Wheel_radius - OutTieRod_Pickup_Dist)/cosd(CAMBER);
+        % TieRodCamberPhi = atand((0.5*Wheel_width)/(Wheel_radius - OutTieRod_Pickup_Dist));
+        % TieRodCamberBeta = abs(CAMBER - TieRodCamberPhi);
+        % TieRodCamberWhiteLength = sqrt( (TieRodCamberPurpleLength)^2 + (TieRodCamberRedLength)^2 - 2*TieRodCamberPurpleLength*TieRodCamberRedLength*cosd(TieRodCamberBeta) );
+        % TieRodCamberBlueLength = TieRodCamberWhiteLength * 1/cosd(CAMBER) * sign(CAMBER - TieRodCamberPhi);
+        %
+        % TieRodToePurpleLength = OutTieRod_Pickup_FOR_AFT*cosd(TOE);
+        % TieRodToeRedLength = OutTieRod_Pickup_FOR_AFT*sind(TOE);
+        %
+        % TieRod2D_Length = sqrt( (Track_Width/2-chassis_width/2+TieRodCamberBlueLength)^2  +  (abs( (Ride_Height + chassis_height/2 - TieRod_Pickup_Dist)  -  (Wheel_radius - TieRod_Pickup_Dist)*(1/cosd(CAMBER))  ))^2     );
+        % TieRod_Length = sqrt( (TieRod2D_Length + TieRodToeRedLength)^2 + (TieRodToePurpleLength -TieRod_Pickup_FOR_AFT)^2 ); %- 0.0021; %-TieRodToeRedLength %- 0.0021;
+        % TieRod_x_sec = [0 -TieRod_Length/2; 0.75/100 -TieRod_Length/2; 0.75/100 TieRod_Length/2; 0 TieRod_Length/2];
+
+        TieRod_Inboard_Z = chassis_height/2 - TieRod_Pickup_Dist + Ride_Height;
+        TieRod_Inboard_Z_BACK = chassis_height/2 - TieRod_Pickup_Dist_BACK + Ride_Height;
+        TieRod_Outboard_Z = (Wheel_radius - OutTieRod_Pickup_Dist)*(1/cosd(CAMBER)) + ( (Wheel_radius - OutTieRod_Pickup_Dist)*tand(CAMBER) - Wheel_width/2 ) * sind(CAMBER);
+        TieRod_Delta_Z = TieRod_Inboard_Z - TieRod_Outboard_Z;
+        TieRod_Delta_Z_BACK = TieRod_Inboard_Z_BACK - TieRod_Outboard_Z;
+
+        % TieRod_Delta_Z = OutTieRod_Pickup_Dist
+
+
+        TieRod_Inboard_Y = chassis_width/2;
+        TieRod_Outboard_Y = Track_Width/2 + ((Wheel_radius - OutTieRod_Pickup_Dist)*tand(CAMBER) - Wheel_width/2) * (cosd(CAMBER)) - OutTieRod_Pickup_FOR_AFT*sind(TOE);
+        TieRod_Delta_Y = TieRod_Outboard_Y - TieRod_Inboard_Y;
+
+        TieRod_Delta_X = TieRod_Pickup_FOR_AFT - OutTieRod_Pickup_FOR_AFT*cosd(TOE);
+        TieRod_Delta_X_BACK = TieRod_Pickup_FOR_AFT_BACK - OutTieRod_Pickup_FOR_AFT*cosd(TOE);
+
+        TieRod_Length = sqrt( (TieRod_Delta_X)^2 + (TieRod_Delta_Y)^2 + (TieRod_Delta_Z)^2 );
+        TieRod_x_sec = [0 -TieRod_Length/2; 0.75/100 -TieRod_Length/2; 0.75/100 TieRod_Length/2; 0 TieRod_Length/2];
+
+        TieRod_Length_BACK = sqrt( (TieRod_Delta_X_BACK)^2 + (TieRod_Delta_Y-chassis_rear_width_addition)^2 + (TieRod_Delta_Z_BACK)^2 );
+        TieRod_x_sec_BACK = [0 -TieRod_Length_BACK/2; 0.75/100 -TieRod_Length_BACK/2; 0.75/100 TieRod_Length_BACK/2; 0 TieRod_Length_BACK/2];
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %% SUSPENSION GEOMETREY SIMULATION %%
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+        % if Steering_Mode || Travel_Mode
+        %     simIn = Simulink.SimulationInput("SGS_3D_1"); %create object
+        % else
+        %     simIn = Simulink.SimulationInput("SGS_3D_1_4WHEEL"); %create object
+        % end
+        % set_param(bdroot, 'SimulationCommand', 'Update')
+        % out = sim(simIn); %run simulation, all results returned in "out"
+
+
+        if Steering_Mode || Travel_Mode
+            out = sim(simIn);
+        elseif Pitch_Mode || Roll_Mode
+            out = sim(simIn4);
         end
-%     end
-% end
+
+
+        timeOutput = out.CTC.time;
+        camberOutput = out.CTC.signals(1).values;
+        toeOutput = out.CTC.signals(2).values;
+        casterOutput = out.CTC.signals(3).values;
+
+
+        if Roll_Mode
+            rollOutput = out.CTC.signals(6).values;
+        elseif Pitch_Mode
+            diveOutput = out.CTC.signals(4).values;
+            squatOutput = out.CTC.signals(5).values;
+        end
+
+
+        %% STEERING
+        % Pi frequency, -pi/4 phase sine wave, time 0.750 -> 2.750
+        if Steering_Mode == true
+            steering_Time_Index_Start = 76;
+            steering_Time_Index_End = 276;
+
+            steering_camber = camberOutput(steering_Time_Index_Start:steering_Time_Index_End);
+            steering_toe = toeOutput(steering_Time_Index_Start:steering_Time_Index_End);
+            steering_caster = casterOutput(steering_Time_Index_Start:steering_Time_Index_End);
+            steering_angle = steering_toe + TOE;
+
+
+            Steering_Slope_Data(i,j,1) = Inboard_TopBack_Pickup_UP - TopArms_Starting_Position;
+            Steering_Slope_Data(i,j,2) = Inboard_TopFront_Pickup_UP - TopArms_Starting_Position;
+            Steering_Slope_Data(i,j,3) = (steering_camber(floorDiv(end,2)) - steering_camber(floorDiv(end,2) + 1)) / (steering_angle(floorDiv(end,2)) - steering_angle(floorDiv(end,2) + 1));
+            Steering_Slope_Data(i,j,4) = (steering_caster(floorDiv(end,2)) - steering_caster(floorDiv(end,2) + 1)) / (steering_angle(floorDiv(end,2)) - steering_angle(floorDiv(end,2) + 1));
+            % Steering_Slope_Data(i,j,3) = (steering_camber(end) - steering_camber(1)) / (steering_angle(end) - steering_angle(1));
+            % Steering_Slope_Data(i,j,4) = (steering_caster(end) - steering_caster(1)) / (steering_angle(end) - steering_angle(1));
+
+
+            hold on
+            subplot(2,2,1)
+            plot(steering_angle, steering_camber, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
+            xline(0, '--')
+            yline(CAMBER, '--')
+            xlabel("Steering Angle")
+            ylabel("Camber")
+            % hold off
+
+            hold on
+            subplot(2,2,2)
+            plot(steering_angle, steering_caster, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
+            xline(0, '--')
+            yline(CASTER, '--')
+            xlabel("Steering Angle")
+            ylabel("Caster")
+            % hold off
+        end
+
+
+        %% SUSPENSION TRAVEL
+        % Pi frequency, -3*pi/4 phase sine wave, 0.03m amplitude, time 0.25 -> 1.25
+        if Travel_Mode == true
+            travel_Time_Index_Start = 26;
+            travel_Time_Index_End = 126;
+
+            travel_rideheight = out.CTC.signals(4).values(travel_Time_Index_Start:travel_Time_Index_End) + Ride_Height - 0.002;
+            travel_camber = camberOutput(travel_Time_Index_Start:travel_Time_Index_End);
+            travel_toe = toeOutput(travel_Time_Index_Start:travel_Time_Index_End);
+            travel_caster = casterOutput(travel_Time_Index_Start:travel_Time_Index_End);
+
+            % (:,:,1) = TopBackArm
+            % (:,:,2) = TopFrontArm
+            % (:,:,3) = CamberSlope
+            % (:,:,4) = CasterSlope
+            % (:,:,5) = ToeSlope
+            Travel_Slope_Data(i,j,1) = Inboard_TopBack_Pickup_UP - TopArms_Starting_Position;
+            Travel_Slope_Data(i,j,2) = Inboard_TopFront_Pickup_UP - TopArms_Starting_Position;
+            Travel_Slope_Data(i,j,3) = (travel_camber(end) - travel_camber(1)) / (travel_rideheight(end) - travel_rideheight(1));
+            Travel_Slope_Data(i,j,4) = (travel_caster(end) - travel_caster(1)) / (travel_rideheight(end) - travel_rideheight(1));
+            Travel_Slope_Data(i,j,5) = (travel_toe(end) - travel_toe(1)) / (travel_rideheight(end) - travel_rideheight(1));
+
+
+
+
+
+
+            % Graphing_Colour = ((j-1)*Number_Of_Iterations + i-1)/(Number_Of_Iterations^2);
+            % Graphing_Colour = ((i-j)/(Number_Of_Iterations))/2 + 0.5
+            % Dive_Index = (i-j)/Number_Of_Iterations;
+            %
+            %
+            %
+            % Dive_Percent = Dive_Index/2 + 0.5
+            %
+            % if Dive_Index < 0 % Red
+            %     Graphing_Colour  = -Dive_Index*0.75;
+            %     Graphing_Colour2 = 0;
+            %     Graphing_Colour3 = 0;
+            % elseif Dive_Index > 0 % Purple
+            %     Graphing_Colour  = 0;
+            %     Graphing_Colour2 = 0;
+            %     Graphing_Colour3 = Dive_Index*0.75;
+            % else % Blue
+            %     Graphing_Colour  = 0;
+            %     Graphing_Colour2 = 1;
+            %     Graphing_Colour3 = 0;
+            % end
+            %
+
+            Graphing_Colour  = 0;
+            Graphing_Colour2 = 1 - ((j-1)*Number_Of_Iterations + i-1)/(Number_Of_Iterations^2);
+            Graphing_Colour3 = ((j-1)*Number_Of_Iterations + i-1)/(Number_Of_Iterations^2);
+
+
+            hold on
+            subplot(3,3,1)
+            plot(travel_rideheight, travel_camber, 'Color',[Graphing_Colour, Graphing_Colour2, Graphing_Colour3])
+            xline(Ride_Height, '--')
+            % yline(CAMBER, '--')
+            yline(CAMBER + 0.21, '--')
+            % colorbar
+            grid on
+            xlabel("RideHeight Travel")
+            ylabel("Camber")
+            % hold off
+
+            hold on
+            subplot(3,3,2)
+            plot(travel_rideheight, travel_caster, 'Color',[Graphing_Colour, Graphing_Colour2, Graphing_Colour3])
+            xline(Ride_Height, '--')
+            yline(CASTER, '--')
+            grid on
+            xlabel("RideHeight Travel")
+            ylabel("Caster")
+            % hold off
+
+            hold on
+            subplot(3,3,3)
+            plot(travel_rideheight, travel_toe, 'Color',[Graphing_Colour, Graphing_Colour2, Graphing_Colour3])
+            xline(Ride_Height, '--')
+            % yline(TOE, '--')
+            yline(TOE + 0.35, '--')
+            grid on
+            xlabel("RideHeight Travel")
+            ylabel("Toe")
+            % hold off
+
+        end
+
+        %% TODO: GET REAR CAMBER
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %%%%%%%%%%%%%%%%%%%%%%%%%
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %%%%%%%%%%%%%
+        %%%%%%%%%%%%%%%%%%%%%%%%
+
+
+        %% PITCH
+        % Pi frequency, -3*pi/4 phase sine wave, 2000 amplitude, time 3.25 -> 5.25
+
+        if Pitch_Mode == true
+            pitch_Time_Index_Start = 326;
+            pitch_Time_Index_End = 526;
+
+
+            pitch_camber = camberOutput(pitch_Time_Index_Start:pitch_Time_Index_End);
+            pitch_toe = toeOutput(pitch_Time_Index_Start:pitch_Time_Index_End);
+            pitch_caster = casterOutput(pitch_Time_Index_Start:pitch_Time_Index_End);
+            pitch_dive = diveOutput(pitch_Time_Index_Start:pitch_Time_Index_End);
+            pitch_squat = squatOutput(pitch_Time_Index_Start:pitch_Time_Index_End);
+
+            hold on
+            subplot(2,3,1)
+            plot(pitch_dive, pitch_camber, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
+            xline(Ride_Height, '--')
+            yline(CAMBER, '--')
+            grid on
+            xlabel("Front Rideheight (Dive)")
+            ylabel("Camber")
+            % hold off
+
+            hold on
+            subplot(2,3,2)
+            plot(pitch_dive, pitch_caster, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
+            xline(Ride_Height, '--')
+            yline(CASTER, '--')
+            grid on
+            xlabel("Front Rideheight (Dive)")
+            ylabel("Caster")
+            % hold off
+
+            hold on
+            subplot(2,3,3)
+            plot(pitch_dive, pitch_toe, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
+            xline(Ride_Height, '--')
+            yline(TOE, '--')
+            grid on
+            xlabel("Front Rideheight (Dive)")
+            ylabel("Toe")
+            % hold off
+
+            hold on
+            subplot(2,3,4)
+            plot(pitch_squat, pitch_camber, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
+            xline(Ride_Height, '--')
+            yline(CAMBER, '--')
+            grid on
+            xlabel("Rear Rideheight (Squat)")
+            ylabel("Camber")
+            % hold off
+
+            hold on
+            subplot(2,3,5)
+            plot(pitch_squat, pitch_caster, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
+            xline(Ride_Height, '--')
+            yline(CASTER, '--')
+            grid on
+            xlabel("Rear Rideheight (Squat)")
+            ylabel("Caster")
+            % hold off
+
+            hold on
+            subplot(2,3,6)
+            plot(pitch_squat, pitch_toe, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
+            xline(Ride_Height, '--')
+            yline(TOE, '--')
+            grid on
+            xlabel("Rear Rideheight (Squat)")
+            ylabel("Toe")
+            % hold off
+
+        end
+
+        %% ROLL
+        if Roll_Mode == true
+            roll_Time_Index_Start = 201;
+            roll_Time_Index_End = 251;
+
+
+            roll_camber = camberOutput(roll_Time_Index_Start:roll_Time_Index_End);
+            roll_toe = toeOutput(roll_Time_Index_Start:roll_Time_Index_End);
+            roll_caster = casterOutput(roll_Time_Index_Start:roll_Time_Index_End);
+            roll_roll = rollOutput(roll_Time_Index_Start:roll_Time_Index_End);
+
+            Roll_Slope_Data(i,j,1) = Inboard_TopBack_Pickup_UP - TopArms_Starting_Position;
+            Roll_Slope_Data(i,j,2) = Inboard_TopFront_Pickup_UP - TopArms_Starting_Position;
+            Roll_Slope_Data(i,j,3) = (roll_camber(end) - roll_camber(1)) / (roll_roll(end) - roll_roll(1));
+            Roll_Slope_Data(i,j,4) = (roll_caster(end) - roll_caster(1)) / (roll_roll(end) - roll_roll(1));
+            Roll_Slope_Data(i,j,5) = (roll_toe(end) - roll_toe(1)) / (roll_roll(end) - roll_roll(1));
+
+
+
+            hold on
+            subplot(2,3,1)
+            plot(roll_roll, roll_camber, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
+            xline(0, '--')
+            yline(CAMBER, '--')
+            grid on
+            xlabel("Roll")
+            ylabel("Camber")
+            % hold off
+
+            hold on
+            subplot(2,3,2)
+            plot(roll_roll, roll_caster, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
+            xline(0, '--')
+            yline(CASTER, '--')
+            grid on
+            xlabel("Roll")
+            ylabel("Caster")
+            % hold off
+
+            hold on
+            subplot(2,3,3)
+            plot(roll_roll, roll_toe, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
+            xline(0, '--')
+            yline(TOE, '--')
+            grid on
+            xlabel("Roll")
+            ylabel("Toe")
+            % hold off
+
+        end
+
+
+    end
+end
+
+if Travel_Mode
+    % Coordinates
+    subplot(3,3,4)
+    surf(Travel_Slope_Data(:,:,1), Travel_Slope_Data(:,:,2), Travel_Slope_Data(:,:,3))
+    xlabel("Back Arm Position")
+    ylabel("Front Arm Position")
+    zlabel("Slope of Camber vs Rideheight")
+
+    subplot(3,3,5)
+    surf(Travel_Slope_Data(:,:,1), Travel_Slope_Data(:,:,2), Travel_Slope_Data(:,:,4))
+    xlabel("Back Arm Position")
+    ylabel("Front Arm Position")
+    zlabel("Slope of Caster vs Rideheight")
+
+    subplot(3,3,6)
+    surf(Travel_Slope_Data(:,:,1), Travel_Slope_Data(:,:,2), Travel_Slope_Data(:,:,5))
+    xlabel("Back Arm Position")
+    ylabel("Front Arm Position")
+    zlabel("Slope of Toe vs Rideheight")
+
+    Travel_Slope_Data_Height = (Travel_Slope_Data(:,:,1) + Travel_Slope_Data(:,:,2)) ./2;
+    Travel_Slope_Data_Dive = atand((Travel_Slope_Data(:,:,1) + Travel_Slope_Data(:,:,2))/Arms_FOR_AFT_Position);
+
+    % Height and Dive
+    %% WORK IN PROGRESS
+    subplot(3,3,7)
+    surf(Travel_Slope_Data_Height, Travel_Slope_Data_Dive, Travel_Slope_Data(:,:,3))
+    xlabel("Height of Arms")
+    ylabel("Amount of Anti-Dive (Deg)")
+    zlabel("Slope of Camber vs Rideheight")
+    colormap winter
+
+    subplot(3,3,8)
+    surf(Travel_Slope_Data_Height, Travel_Slope_Data_Dive, Travel_Slope_Data(:,:,4))
+    xlabel("Height of Arms")
+    ylabel("Amount of Anti-Dive (Deg)")
+    zlabel("Slope of Caster vs Rideheight")
+    colormap winter
+
+    subplot(3,3,9)
+    surf(Travel_Slope_Data_Height, Travel_Slope_Data_Dive, Travel_Slope_Data(:,:,5))
+    xlabel("Height of Arms")
+    ylabel("Amount of Anti-Dive (Deg)")
+    zlabel("Slope of Toe vs Rideheight")
+    colormap winter
+
+end
+
+if Steering_Mode
+    % Coordinates
+    subplot(2,2,3)
+    surf(Steering_Slope_Data(:,:,1), Steering_Slope_Data(:,:,2), Steering_Slope_Data(:,:,3))
+    xlabel("Back Arm Position")
+    ylabel("Front Arm Position")
+    zlabel("Slope of Camber vs Steering Angle")
+    colormap winter
+
+
+    subplot(2,2,4)
+    surf(Steering_Slope_Data(:,:,1), Steering_Slope_Data(:,:,2), Steering_Slope_Data(:,:,4))
+    xlabel("Back Arm Position")
+    ylabel("Front Arm Position")
+    zlabel("Slope of Caster vs Steering Angle")
+    colormap winter
+
+
+end
+
+if Roll_Mode
+    % Coordinates
+    subplot(2,3,4)
+    surf(Roll_Slope_Data(:,:,1), Roll_Slope_Data(:,:,2), Roll_Slope_Data(:,:,3))
+    xlabel("Back Arm Position")
+    ylabel("Front Arm Position")
+    zlabel("Slope of Camber vs Roll")
+    colormap winter
+
+    subplot(2,3,5)
+    surf(Roll_Slope_Data(:,:,1), Roll_Slope_Data(:,:,2), Roll_Slope_Data(:,:,4))
+    xlabel("Back Arm Position")
+    ylabel("Front Arm Position")
+    zlabel("Slope of Caster vs Roll")
+    colormap winter
+
+    subplot(2,3,6)
+    surf(Roll_Slope_Data(:,:,1), Roll_Slope_Data(:,:,2), Roll_Slope_Data(:,:,5))
+    xlabel("Back Arm Position")
+    ylabel("Front Arm Position")
+    zlabel("Slope of Toe vs Roll")
+    colormap winter
+
+
+end
 
 disp(":D")
