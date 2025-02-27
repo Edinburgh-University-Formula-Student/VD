@@ -21,22 +21,27 @@ Roll_Mode = false;
 %%%%%%%%%%%%%%%%%%%%%%%
 % Steering_Mode = true;
 % Travel_Mode = true;
-% Pitch_Mode = true;
-Roll_Mode = true;
+Pitch_Mode = true;
+% Roll_Mode = true;
 %%%%%%%%%%%%%%%%%%%%%%%
 
 chassis_height = 2*207*1/1000; %m
 chassis_length = 1.5; %m
 chassis_width = 0.42; %m
 
-Ride_Height = 0.14; %m
+% if Roll_Mode || Pitch_Mode
+%     Ride_Height = 0.14+0.025;
+% else
+    Ride_Height = 0.14; %m
+% end
+Ride_Height_Block_Height = 0.14;
 Track_Width = 1.575; %m
 Front_Wheelbase = 0.55; %m
 Rear_Wheelbase = 0.87; %m
 
 
 
-Number_Of_Iterations = 4;
+Number_Of_Iterations = 3;
 Iteration_Step = 0.02; %m
 
 if Steering_Mode
@@ -52,13 +57,13 @@ elseif Travel_Mode
     % (:,:,3) = CamberSlope
     % (:,:,4) = CasterSlope
     % (:,:,5) = ToeSlope
-% elseif Pitch_Mode
-%     Pitch_Slope_Data = zeros(Number_Of_Iterations, Number_Of_Iterations, 5);
-%     % (:,:,1) = TopBackArm
-%     % (:,:,2) = TopFrontArm
-%     % (:,:,3) = CamberSlope
-%     % (:,:,4) = CasterSlope
-%     % (:,:,5) = ToeSlope
+elseif Pitch_Mode
+    Pitch_Slope_Data = zeros(Number_Of_Iterations, Number_Of_Iterations, 5);
+    % (:,:,1) = TopBackArm
+    % (:,:,2) = TopFrontArm
+    % (:,:,3) = CamberSlope
+    % (:,:,4) = CasterSlope
+    % (:,:,5) = ToeSlope
 elseif Roll_Mode
     Roll_Slope_Data = zeros(Number_Of_Iterations, Number_Of_Iterations, 5);
     % (:,:,1) = TopBackArm
@@ -96,10 +101,14 @@ chassis_rear_width_addition = 0.065; %m
 if Travel_Mode
     CAMBER = -1.5 - 0.21; %DEG, Static Camber at ride height
     TOE = -2 - 0.35;
+elseif Roll_Mode || Pitch_Mode
+    CAMBER = -1.5 - 0.9; %DEG, Static Camber at ride height
+    TOE = -2 + 0.35;
 else
     CAMBER = -1.5;
     TOE = -2;
 end
+
  %DEG, Static Toe at ride height
 CASTER = 5.51; %DEG, Static Caster at ride height, 5.51 Real Value
 KINGPIN = 10; %DEG, Kingpin with respect to tyre rim, 17.478 Real Value
@@ -162,6 +171,15 @@ OutBot_Pickup_Dist = 0.07778083697; %m REAL VALUE
 
 OutTieRod_Pickup_Dist = 0.02117; %m REAL VALUE
 OutTieRod_Pickup_FOR_AFT = -0.07555; %m Positive for FOR, Negative for AFT REAL VALUE
+
+% [innertop(radius, width), innerbottom(radius, -width), outbottom(radius, -width), outtop(radius, width)]
+
+
+Powertrain_Cone_Length = 1; %m
+Powertrain_Inboard_CV_Joint_Offset = 0.2; %m
+Powertrain_Cone_x_sec = [0, 0; 0, -Powertrain_Cone_Length;Powertrain_Cone_Length*sind(30), -Powertrain_Cone_Length;];
+
+
 
 %% EXPERIMENTAL
 % outboardZ = Wheel_radius/cosd(CAMBER) - (Wheel_radius*tand(CAMBER) - Wheel_width/2)*sind(CAMBER);
@@ -800,84 +818,121 @@ for j=1:Number_Of_Iterations
 
 
         %% PITCH
-        % Pi frequency, -3*pi/4 phase sine wave, 2000 amplitude, time 3.25 -> 5.25
+        % Pi frequency, -3*pi/4 phase sine wave, 2000 amplitude, time 2->3
 
         if Pitch_Mode == true
-            pitch_Time_Index_Start = 326;
-            pitch_Time_Index_End = 526;
-
+            pitch_Time_Index_Start = 151;
+            pitch_Time_Index_End = 251;
 
             pitch_camber = camberOutput(pitch_Time_Index_Start:pitch_Time_Index_End);
             pitch_toe = toeOutput(pitch_Time_Index_Start:pitch_Time_Index_End);
             pitch_caster = casterOutput(pitch_Time_Index_Start:pitch_Time_Index_End);
             pitch_dive = diveOutput(pitch_Time_Index_Start:pitch_Time_Index_End);
             pitch_squat = squatOutput(pitch_Time_Index_Start:pitch_Time_Index_End);
+            pitch_pitch = out.CTC.signals(7).values(pitch_Time_Index_Start:pitch_Time_Index_End);
+
+            Pitch_Slope_Data(i,j,1) = Inboard_TopBack_Pickup_UP - TopArms_Starting_Position;
+            Pitch_Slope_Data(i,j,2) = Inboard_TopFront_Pickup_UP - TopArms_Starting_Position;
+            Pitch_Slope_Data(i,j,3) = (pitch_camber(end) - pitch_camber(1)) / (pitch_pitch(end) - pitch_pitch(1));
+            Pitch_Slope_Data(i,j,4) = (pitch_caster(end) - pitch_caster(1)) / (pitch_pitch(end) - pitch_pitch(1));
+            Pitch_Slope_Data(i,j,5) = (pitch_toe(end) - pitch_toe(1)) / (pitch_pitch(end) - pitch_pitch(1));
 
             hold on
             subplot(2,3,1)
-            plot(pitch_dive, pitch_camber, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
-            xline(Ride_Height, '--')
-            yline(CAMBER, '--')
+            plot(pitch_pitch, pitch_camber, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
+            xline(0, '--')
+            yline(CAMBER + 0.9, '--')
             grid on
-            xlabel("Front Rideheight (Dive)")
+            xlabel("Pitch")
             ylabel("Camber")
             % hold off
 
             hold on
             subplot(2,3,2)
-            plot(pitch_dive, pitch_caster, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
-            xline(Ride_Height, '--')
+            plot(pitch_pitch, pitch_caster, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
+            xline(0, '--')
             yline(CASTER, '--')
             grid on
-            xlabel("Front Rideheight (Dive)")
+            xlabel("Pitch")
             ylabel("Caster")
             % hold off
 
             hold on
             subplot(2,3,3)
-            plot(pitch_dive, pitch_toe, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
-            xline(Ride_Height, '--')
-            yline(TOE, '--')
+            plot(pitch_pitch, pitch_toe, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
+            xline(0, '--')
+            yline(TOE - 0.35, '--')
             grid on
-            xlabel("Front Rideheight (Dive)")
+            xlabel("Pitch")
             ylabel("Toe")
             % hold off
 
-            hold on
-            subplot(2,3,4)
-            plot(pitch_squat, pitch_camber, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
-            xline(Ride_Height, '--')
-            yline(CAMBER, '--')
-            grid on
-            xlabel("Rear Rideheight (Squat)")
-            ylabel("Camber")
-            % hold off
 
-            hold on
-            subplot(2,3,5)
-            plot(pitch_squat, pitch_caster, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
-            xline(Ride_Height, '--')
-            yline(CASTER, '--')
-            grid on
-            xlabel("Rear Rideheight (Squat)")
-            ylabel("Caster")
-            % hold off
-
-            hold on
-            subplot(2,3,6)
-            plot(pitch_squat, pitch_toe, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
-            xline(Ride_Height, '--')
-            yline(TOE, '--')
-            grid on
-            xlabel("Rear Rideheight (Squat)")
-            ylabel("Toe")
-            % hold off
+            % hold on
+            % subplot(2,3,1)
+            % plot(pitch_dive, pitch_camber, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
+            % xline(Ride_Height, '--')
+            % yline(CAMBER, '--')
+            % grid on
+            % xlabel("Front Rideheight (Dive)")
+            % ylabel("Camber")
+            % % hold off
+            % 
+            % hold on
+            % subplot(2,3,2)
+            % plot(pitch_dive, pitch_caster, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
+            % xline(Ride_Height, '--')
+            % yline(CASTER, '--')
+            % grid on
+            % xlabel("Front Rideheight (Dive)")
+            % ylabel("Caster")
+            % % hold off
+            % 
+            % hold on
+            % subplot(2,3,3)
+            % plot(pitch_dive, pitch_toe, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
+            % xline(Ride_Height, '--')
+            % yline(TOE, '--')
+            % grid on
+            % xlabel("Front Rideheight (Dive)")
+            % ylabel("Toe")
+            % % hold off
+            % 
+            % hold on
+            % subplot(2,3,4)
+            % plot(pitch_squat, pitch_camber, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
+            % xline(Ride_Height, '--')
+            % yline(CAMBER, '--')
+            % grid on
+            % xlabel("Rear Rideheight (Squat)")
+            % ylabel("Camber")
+            % % hold off
+            % 
+            % hold on
+            % subplot(2,3,5)
+            % plot(pitch_squat, pitch_caster, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
+            % xline(Ride_Height, '--')
+            % yline(CASTER, '--')
+            % grid on
+            % xlabel("Rear Rideheight (Squat)")
+            % ylabel("Caster")
+            % % hold off
+            % 
+            % hold on
+            % subplot(2,3,6)
+            % plot(pitch_squat, pitch_toe, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
+            % xline(Ride_Height, '--')
+            % yline(TOE, '--')
+            % grid on
+            % xlabel("Rear Rideheight (Squat)")
+            % ylabel("Toe")
+            % % hold off
 
         end
 
         %% ROLL
         if Roll_Mode == true
-            roll_Time_Index_Start = 201;
+            roll_Time_Index_Start = 151;
             roll_Time_Index_End = 251;
 
 
@@ -898,7 +953,7 @@ for j=1:Number_Of_Iterations
             subplot(2,3,1)
             plot(roll_roll, roll_camber, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
             xline(0, '--')
-            yline(CAMBER, '--')
+            yline(CAMBER + 0.9, '--')
             grid on
             xlabel("Roll")
             ylabel("Camber")
@@ -918,7 +973,7 @@ for j=1:Number_Of_Iterations
             subplot(2,3,3)
             plot(roll_roll, roll_toe, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
             xline(0, '--')
-            yline(TOE, '--')
+            yline(TOE - 0.35, '--')
             grid on
             xlabel("Roll")
             ylabel("Toe")
@@ -993,6 +1048,32 @@ if Steering_Mode
     xlabel("Back Arm Position")
     ylabel("Front Arm Position")
     zlabel("Slope of Caster vs Steering Angle")
+    colormap winter
+
+
+end
+
+if Pitch_Mode
+    % Coordinates
+    subplot(2,3,4)
+    surf(Pitch_Slope_Data(:,:,1), Pitch_Slope_Data(:,:,2), Pitch_Slope_Data(:,:,3))
+    xlabel("Back Arm Position")
+    ylabel("Front Arm Position")
+    zlabel("Slope of Camber vs Pitch")
+    colormap winter
+
+    subplot(2,3,5)
+    surf(Pitch_Slope_Data(:,:,1), Pitch_Slope_Data(:,:,2), Pitch_Slope_Data(:,:,4))
+    xlabel("Back Arm Position")
+    ylabel("Front Arm Position")
+    zlabel("Slope of Caster vs Pitch")
+    colormap winter
+
+    subplot(2,3,6)
+    surf(Pitch_Slope_Data(:,:,1), Pitch_Slope_Data(:,:,2), Pitch_Slope_Data(:,:,5))
+    xlabel("Back Arm Position")
+    ylabel("Front Arm Position")
+    zlabel("Slope of Toe vs Pitch")
     colormap winter
 
 

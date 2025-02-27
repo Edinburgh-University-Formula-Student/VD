@@ -19,24 +19,29 @@ Pitch_Mode = false;
 Roll_Mode = false;
 
 %%%%%%%%%%%%%%%%%%%%%%%
-Steering_Mode = true;
+% Steering_Mode = true;
 % Travel_Mode = true;
 % Pitch_Mode = true;
-% Roll_Mode = true;
+Roll_Mode = true;
 %%%%%%%%%%%%%%%%%%%%%%%
 
 chassis_height = 2*207*1/1000; %m
 chassis_length = 1.5; %m
 chassis_width = 0.42; %m
 
-Ride_Height = 0.14; %m
+if Roll_Mode || Pitch_Mode
+    Ride_Height = 0.14+0.025;
+else
+    Ride_Height = 0.14; %m
+end
+Ride_Height_Block_Height = 0.14;
 Track_Width = 1.575; %m
 Front_Wheelbase = 0.55; %m
 Rear_Wheelbase = 0.87; %m
 
 
 
-Number_Of_Iterations = 4;
+Number_Of_Iterations = 3;
 Iteration_Step = 0.02; %m
 
 if Steering_Mode
@@ -94,11 +99,17 @@ chassis_rear_width_addition = 0.065; %m
 
 
 if Travel_Mode
-    CAMBER = -1.5 - 0.38; %DEG, Static Camber at ride height
+    CAMBER = -1.5 - 0.21; %DEG, Static Camber at ride height
+    TOE = -2 - 0.35;
+elseif Roll_Mode || Pitch_Mode
+    CAMBER = -1.5 - 0.9; %DEG, Static Camber at ride height
+    TOE = -2 + 0.35;
 else
     CAMBER = -1.5;
+    TOE = -2;
 end
-TOE = -2; %DEG, Static Toe at ride height
+
+ %DEG, Static Toe at ride height
 CASTER = 5.51; %DEG, Static Caster at ride height, 5.51 Real Value
 KINGPIN = 10; %DEG, Kingpin with respect to tyre rim, 17.478 Real Value
 Scrub_Radius = 0; %m, Scrub radius from steering axis to middle of tyre
@@ -115,12 +126,66 @@ Shock_Pickup_Height_BACK = 0.01; %m
 Bell_CrankL_Pickup_Height_BACK = -0.2; %m
 
 
+%% BELLCRANK & SHOCK
+
+% plot(A_Arm(:,1), A_Arm(:,2))
+
+Bell_CrankL = [0, 0; Bell_CrankL_Top_Length/2, Bell_CrankL_Height; -Bell_CrankL_Top_Length/2, Bell_CrankL_Height;];
+Bell_CrankL_Internal_Angle = atand((0.5*Bell_CrankL_Top_Length)/Bell_CrankL_Height);
+
+Inboard_Pickup_Height = chassis_height/2+Bell_CrankL_Height; %m
+Cylinder_Length = 0.15; %m
+Piston_Length = 0.15; %m
+Arm_W = 0.025; %m
+ArmHole_R = 0.01; %m
+Arm_Num_Holes = 2;
+
+cyl_x_sec = [0 -Cylinder_Length/2; 1.5/100 -Cylinder_Length/2; 1.5/100 Cylinder_Length/2; 0.75/100 Cylinder_Length/2; 0.75/100 -(Cylinder_Length-0.25)/2; 0 -(Cylinder_Length-0.25)/2];
+piston_x_sec = [0 -Piston_Length/2; 0.75/100 -Piston_Length/2; 0.75/100 Piston_Length/2; 0 Piston_Length/2];
+
+%% PISTON NEUTRAL POSITION
+BlueLineLength = sqrt(Shock_Pickup_Height^2 + (chassis_width/2)^2);
+AngleBetweenBlueAndWhiteLine = Bell_CrankL_Chassis_Desired_Angle + atand((0.5*chassis_width)/Shock_Pickup_Height);
+PurpleLineLength = sqrt(  (BlueLineLength^2) + (Bell_CrankL_Height^2) - 2*BlueLineLength*Bell_CrankL_Height*cosd(AngleBetweenBlueAndWhiteLine) );
+PistonL_Neutral_Displacement = PurpleLineLength - (Piston_Length);
+
 Spring_Stiffness = 350; %LBS/IN = 61294nm REAL VALUE
 Damping_Coefficient = 1000;
 
+% -------------------------
+% 0.2057 m
+Tyre_Wall_Thickness = 3; Tyre_Wall_Thickness = Tyre_Wall_Thickness/39.37; %INCHES; m conversion
+Rim_Outer_Radius = 5; Rim_Outer_Radius = Rim_Outer_Radius/39.37; %INCHES; m conversion
+
+Wheel_width = 7.5/39.37; %INCHES   %0.213; %m
+Rim_Thickness = 0.02; %m
+
+Wheel_radius = Rim_Outer_Radius+Tyre_Wall_Thickness; %m
+Rim_x_sec = [Rim_Outer_Radius-Rim_Thickness Wheel_width/2; Rim_Outer_Radius-Rim_Thickness -Wheel_width/2; Rim_Outer_Radius -Wheel_width/2; Rim_Outer_Radius Wheel_width/2];
+Tyre_x_sec = [Wheel_radius-Tyre_Wall_Thickness Wheel_width/2; Wheel_radius-Tyre_Wall_Thickness -Wheel_width/2; Wheel_radius -Wheel_width/2; Wheel_radius Wheel_width/2];
+% ------------------------
+
+
+OutTop_Pickup_Dist = 0.06948184943; %m REAL VALUE
+OutBot_Pickup_Dist = 0.07778083697; %m REAL VALUE
+
+OutTieRod_Pickup_Dist = 0.02117; %m REAL VALUE
+OutTieRod_Pickup_FOR_AFT = -0.07555; %m Positive for FOR, Negative for AFT REAL VALUE
+
+% [innertop(radius, width), innerbottom(radius, -width), outbottom(radius, -width), outtop(radius, width)]
+
+
+Powertrain_Cone_Length = 1; %m
+Powertrain_Inboard_CV_Joint_Offset = 0.2; %m
+Powertrain_Cone_x_sec = [0, 0; 0, -Powertrain_Cone_Length;Powertrain_Cone_Length*sind(30), -Powertrain_Cone_Length;];
+
+
+
 %% EXPERIMENTAL
-outboardZ = Wheel_radius/cosd(CAMBER) - ((Wheel_radius*tand(CAMBER) - Wheel_width))
-abs()
+% outboardZ = Wheel_radius/cosd(CAMBER) - (Wheel_radius*tand(CAMBER) - Wheel_width/2)*sind(CAMBER);
+% inboardZ = chassis_height/2 + Ride_Height;
+Tyre_Floor_Plane = -abs(chassis_height/2 + Ride_Height - (Wheel_radius/cosd(CAMBER) - (Wheel_radius*tand(CAMBER) - Wheel_width/2)*sind(CAMBER)));
+
 %% ITERATION
 
 for j=1:Number_Of_Iterations
@@ -171,25 +236,7 @@ for j=1:Number_Of_Iterations
         % -------------------------
 
 
-        % -------------------------
-        % 0.2057 m
-        Tyre_Wall_Thickness = 3; Tyre_Wall_Thickness = Tyre_Wall_Thickness/39.37; %INCHES; m conversion
-        Rim_Outer_Radius = 5; Rim_Outer_Radius = Rim_Outer_Radius/39.37; %INCHES; m conversion
-
-        Wheel_width = 7.5/39.37; %INCHES   %0.213; %m
-        Rim_Thickness = 0.02; %m
-
-        Wheel_radius = Rim_Outer_Radius+Tyre_Wall_Thickness; %m
-        Rim_x_sec = [Rim_Outer_Radius-Rim_Thickness Wheel_width/2; Rim_Outer_Radius-Rim_Thickness -Wheel_width/2; Rim_Outer_Radius -Wheel_width/2; Rim_Outer_Radius Wheel_width/2];
-        Tyre_x_sec = [Wheel_radius-Tyre_Wall_Thickness Wheel_width/2; Wheel_radius-Tyre_Wall_Thickness -Wheel_width/2; Wheel_radius -Wheel_width/2; Wheel_radius Wheel_width/2];
-        % ------------------------
-
-
-        OutTop_Pickup_Dist = 0.06948184943; %m REAL VALUE
-        OutBot_Pickup_Dist = 0.07778083697; %m REAL VALUE
-
-        OutTieRod_Pickup_Dist = 0.02117; %m REAL VALUE
-        OutTieRod_Pickup_FOR_AFT = -0.07555; %m Positive for FOR, Negative for AFT REAL VALUE
+  
 
 
 
@@ -238,23 +285,6 @@ for j=1:Number_Of_Iterations
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
-        %% BELLCRANK & SHOCK
-
-        % plot(A_Arm(:,1), A_Arm(:,2))
-
-        Bell_CrankL = [0, 0; Bell_CrankL_Top_Length/2, Bell_CrankL_Height; -Bell_CrankL_Top_Length/2, Bell_CrankL_Height;];
-        Bell_CrankL_Internal_Angle = atand((0.5*Bell_CrankL_Top_Length)/Bell_CrankL_Height);
-
-        Inboard_Pickup_Height = chassis_height/2+Bell_CrankL_Height; %m
-        Cylinder_Length = 0.15; %m
-        Piston_Length = 0.15; %m
-        Arm_W = 0.025; %m
-        ArmHole_R = 0.01; %m
-        Arm_Num_Holes = 2;
-
-        cyl_x_sec = [0 -Cylinder_Length/2; 1.5/100 -Cylinder_Length/2; 1.5/100 Cylinder_Length/2; 0.75/100 Cylinder_Length/2; 0.75/100 -(Cylinder_Length-0.25)/2; 0 -(Cylinder_Length-0.25)/2];
-        piston_x_sec = [0 -Piston_Length/2; 0.75/100 -Piston_Length/2; 0.75/100 Piston_Length/2; 0 Piston_Length/2];
-
 
 
         %% PICKUP POINTS
@@ -292,11 +322,7 @@ for j=1:Number_Of_Iterations
         ShockL_PickupCOORD_BACK = [0, 0, chassis_height/2 + Shock_Pickup_Height_BACK + Bell_CrankL_Pickup_Height_BACK];
 
 
-        %% PISTON NEUTRAL POSITION
-        BlueLineLength = sqrt(Shock_Pickup_Height^2 + (chassis_width/2)^2);
-        AngleBetweenBlueAndWhiteLine = Bell_CrankL_Chassis_Desired_Angle + atand((0.5*chassis_width)/Shock_Pickup_Height);
-        PurpleLineLength = sqrt(  (BlueLineLength^2) + (Bell_CrankL_Height^2) - 2*BlueLineLength*Bell_CrankL_Height*cosd(AngleBetweenBlueAndWhiteLine) );
-        PistonL_Neutral_Displacement = PurpleLineLength - (Piston_Length);
+
 
         %% CASTER
         OLDOutTop_Pickup_Dist = OutTop_Pickup_Dist;
@@ -633,7 +659,7 @@ for j=1:Number_Of_Iterations
 
         if Steering_Mode || Travel_Mode
             out = sim(simIn);
-        else
+        elseif Pitch_Mode || Roll_Mode
             out = sim(simIn4);
         end
 
@@ -698,7 +724,7 @@ for j=1:Number_Of_Iterations
             travel_Time_Index_Start = 26;
             travel_Time_Index_End = 126;
 
-            travel_rideheight = out.CTC.signals(4).values(travel_Time_Index_Start:travel_Time_Index_End) + Ride_Height + 0.005;
+            travel_rideheight = out.CTC.signals(4).values(travel_Time_Index_Start:travel_Time_Index_End) + Ride_Height - 0.002;
             travel_camber = camberOutput(travel_Time_Index_Start:travel_Time_Index_End);
             travel_toe = toeOutput(travel_Time_Index_Start:travel_Time_Index_End);
             travel_caster = casterOutput(travel_Time_Index_Start:travel_Time_Index_End);
@@ -751,7 +777,8 @@ for j=1:Number_Of_Iterations
             subplot(3,3,1)
             plot(travel_rideheight, travel_camber, 'Color',[Graphing_Colour, Graphing_Colour2, Graphing_Colour3])
             xline(Ride_Height, '--')
-            yline(CAMBER + 0.38, '--')
+            % yline(CAMBER, '--')
+            yline(CAMBER + 0.21, '--')
             % colorbar
             grid on
             xlabel("RideHeight Travel")
@@ -772,7 +799,8 @@ for j=1:Number_Of_Iterations
             subplot(3,3,3)
             plot(travel_rideheight, travel_toe, 'Color',[Graphing_Colour, Graphing_Colour2, Graphing_Colour3])
             xline(Ride_Height, '--')
-            yline(TOE, '--')
+            % yline(TOE, '--')
+            yline(TOE + 0.35, '--')
             grid on
             xlabel("RideHeight Travel")
             ylabel("Toe")
@@ -780,7 +808,7 @@ for j=1:Number_Of_Iterations
 
         end
 
-        %% TODO: GET REAR CAMBER VS REAR RIDEHEIGHT
+        %% TODO: GET REAR CAMBER
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %%%%%%%%%%%%%%%%%%%%%%%%%
@@ -790,11 +818,11 @@ for j=1:Number_Of_Iterations
 
 
         %% PITCH
-        % Pi frequency, -3*pi/4 phase sine wave, 2000 amplitude, time 3.25 -> 5.25
+        % Pi frequency, -3*pi/4 phase sine wave, 2000 amplitude, time 2->3
 
         if Pitch_Mode == true
-            pitch_Time_Index_Start = 326;
-            pitch_Time_Index_End = 526;
+            pitch_Time_Index_Start = 201;
+            pitch_Time_Index_End = 301;
 
 
             pitch_camber = camberOutput(pitch_Time_Index_Start:pitch_Time_Index_End);
@@ -802,73 +830,74 @@ for j=1:Number_Of_Iterations
             pitch_caster = casterOutput(pitch_Time_Index_Start:pitch_Time_Index_End);
             pitch_dive = diveOutput(pitch_Time_Index_Start:pitch_Time_Index_End);
             pitch_squat = squatOutput(pitch_Time_Index_Start:pitch_Time_Index_End);
+            pitch_pitch = out.CTC.signals(7).values(pitch_Time_Index_Start:pitch_Time_Index_End);
 
-            hold on
-            subplot(2,3,1)
-            plot(pitch_dive, pitch_camber, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
-            xline(Ride_Height, '--')
-            yline(CAMBER, '--')
-            grid on
-            xlabel("Front Rideheight (Dive)")
-            ylabel("Camber")
-            % hold off
-
-            hold on
-            subplot(2,3,2)
-            plot(pitch_dive, pitch_caster, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
-            xline(Ride_Height, '--')
-            yline(CASTER, '--')
-            grid on
-            xlabel("Front Rideheight (Dive)")
-            ylabel("Caster")
-            % hold off
-
-            hold on
-            subplot(2,3,3)
-            plot(pitch_dive, pitch_toe, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
-            xline(Ride_Height, '--')
-            yline(TOE, '--')
-            grid on
-            xlabel("Front Rideheight (Dive)")
-            ylabel("Toe")
-            % hold off
-
-            hold on
-            subplot(2,3,4)
-            plot(pitch_squat, pitch_camber, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
-            xline(Ride_Height, '--')
-            yline(CAMBER, '--')
-            grid on
-            xlabel("Rear Rideheight (Squat)")
-            ylabel("Camber")
-            % hold off
-
-            hold on
-            subplot(2,3,5)
-            plot(pitch_squat, pitch_caster, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
-            xline(Ride_Height, '--')
-            yline(CASTER, '--')
-            grid on
-            xlabel("Rear Rideheight (Squat)")
-            ylabel("Caster")
-            % hold off
-
-            hold on
-            subplot(2,3,6)
-            plot(pitch_squat, pitch_toe, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
-            xline(Ride_Height, '--')
-            yline(TOE, '--')
-            grid on
-            xlabel("Rear Rideheight (Squat)")
-            ylabel("Toe")
-            % hold off
+            % hold on
+            % subplot(2,3,1)
+            % plot(pitch_dive, pitch_camber, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
+            % xline(Ride_Height, '--')
+            % yline(CAMBER, '--')
+            % grid on
+            % xlabel("Front Rideheight (Dive)")
+            % ylabel("Camber")
+            % % hold off
+            % 
+            % hold on
+            % subplot(2,3,2)
+            % plot(pitch_dive, pitch_caster, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
+            % xline(Ride_Height, '--')
+            % yline(CASTER, '--')
+            % grid on
+            % xlabel("Front Rideheight (Dive)")
+            % ylabel("Caster")
+            % % hold off
+            % 
+            % hold on
+            % subplot(2,3,3)
+            % plot(pitch_dive, pitch_toe, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
+            % xline(Ride_Height, '--')
+            % yline(TOE, '--')
+            % grid on
+            % xlabel("Front Rideheight (Dive)")
+            % ylabel("Toe")
+            % % hold off
+            % 
+            % hold on
+            % subplot(2,3,4)
+            % plot(pitch_squat, pitch_camber, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
+            % xline(Ride_Height, '--')
+            % yline(CAMBER, '--')
+            % grid on
+            % xlabel("Rear Rideheight (Squat)")
+            % ylabel("Camber")
+            % % hold off
+            % 
+            % hold on
+            % subplot(2,3,5)
+            % plot(pitch_squat, pitch_caster, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
+            % xline(Ride_Height, '--')
+            % yline(CASTER, '--')
+            % grid on
+            % xlabel("Rear Rideheight (Squat)")
+            % ylabel("Caster")
+            % % hold off
+            % 
+            % hold on
+            % subplot(2,3,6)
+            % plot(pitch_squat, pitch_toe, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
+            % xline(Ride_Height, '--')
+            % yline(TOE, '--')
+            % grid on
+            % xlabel("Rear Rideheight (Squat)")
+            % ylabel("Toe")
+            % % hold off
 
         end
 
         %% ROLL
         if Roll_Mode == true
             roll_Time_Index_Start = 201;
-            roll_Time_Index_End = 251;
+            roll_Time_Index_End = 301;
 
 
             roll_camber = camberOutput(roll_Time_Index_Start:roll_Time_Index_End);
@@ -950,18 +979,21 @@ if Travel_Mode
     xlabel("Height of Arms")
     ylabel("Amount of Anti-Dive (Deg)")
     zlabel("Slope of Camber vs Rideheight")
+    colormap winter
 
     subplot(3,3,8)
     surf(Travel_Slope_Data_Height, Travel_Slope_Data_Dive, Travel_Slope_Data(:,:,4))
     xlabel("Height of Arms")
     ylabel("Amount of Anti-Dive (Deg)")
     zlabel("Slope of Caster vs Rideheight")
+    colormap winter
 
     subplot(3,3,9)
     surf(Travel_Slope_Data_Height, Travel_Slope_Data_Dive, Travel_Slope_Data(:,:,5))
     xlabel("Height of Arms")
     ylabel("Amount of Anti-Dive (Deg)")
     zlabel("Slope of Toe vs Rideheight")
+    colormap winter
 
 end
 
@@ -992,18 +1024,21 @@ if Roll_Mode
     xlabel("Back Arm Position")
     ylabel("Front Arm Position")
     zlabel("Slope of Camber vs Roll")
+    colormap winter
 
     subplot(2,3,5)
     surf(Roll_Slope_Data(:,:,1), Roll_Slope_Data(:,:,2), Roll_Slope_Data(:,:,4))
     xlabel("Back Arm Position")
     ylabel("Front Arm Position")
     zlabel("Slope of Caster vs Roll")
+    colormap winter
 
     subplot(2,3,6)
     surf(Roll_Slope_Data(:,:,1), Roll_Slope_Data(:,:,2), Roll_Slope_Data(:,:,5))
     xlabel("Back Arm Position")
     ylabel("Front Arm Position")
     zlabel("Slope of Toe vs Roll")
+    colormap winter
 
 
 end
