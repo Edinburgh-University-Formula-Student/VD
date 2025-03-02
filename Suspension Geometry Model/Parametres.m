@@ -30,14 +30,15 @@ chassis_length = 1.5; %m
 chassis_width = 0.42; %m
 
 % if Roll_Mode || Pitch_Mode
-%     Ride_Height = 0.14+0.025;
+%     Ride_Height = 0.14+0.038;
 % else
     Ride_Height = 0.14; %m
 % end
 Ride_Height_Block_Height = 0.14;
 Track_Width = 1.575; %m
 Front_Wheelbase = 0.55; %m
-Rear_Wheelbase = 0.87; %m
+% Rear_Wheelbase = 0.87; %m
+Rear_Wheelbase = 1.07; %m
 
 
 
@@ -101,9 +102,9 @@ chassis_rear_width_addition = 0.065; %m
 if Travel_Mode
     CAMBER = -1.5 - 0.21; %DEG, Static Camber at ride height
     TOE = -2 - 0.35;
-elseif Roll_Mode || Pitch_Mode
-    CAMBER = -1.5 - 0.9; %DEG, Static Camber at ride height
-    TOE = -2 + 0.35;
+% elseif Roll_Mode || Pitch_Mode
+%     CAMBER = -1.5 - 0.9; %DEG, Static Camber at ride height
+%     TOE = -2 + 0.35;
 else
     CAMBER = -1.5;
     TOE = -2;
@@ -174,10 +175,16 @@ OutTieRod_Pickup_FOR_AFT = -0.07555; %m Positive for FOR, Negative for AFT REAL 
 
 % [innertop(radius, width), innerbottom(radius, -width), outbottom(radius, -width), outtop(radius, width)]
 
-
+%% DRIVESHAFT
 Powertrain_Cone_Length = 1; %m
-Powertrain_Inboard_CV_Joint_Offset = 0.2; %m
-Powertrain_Cone_x_sec = [0, 0; 0, -Powertrain_Cone_Length;Powertrain_Cone_Length*sind(30), -Powertrain_Cone_Length;];
+Powertrain_Inboard_CV_Joint_Offset = 0.1385; %m
+Powertrain_Cone_x_sec = [0, 0; 0, -Powertrain_Cone_Length;Powertrain_Cone_Length*sind(12), -Powertrain_Cone_Length;];
+
+
+
+
+
+
 
 
 
@@ -215,10 +222,10 @@ for j=1:Number_Of_Iterations
         TieRod_Pickup_Dist = 0.15; %m
         TieRod_Pickup_FOR_AFT = -0.07555; %m Positive for FOR, Negative for AFT
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        Inboard_TopBack_Pickup_UP_BACK = RearTopArms_Starting_Position  - Iteration_Step * i; %m
+        Inboard_TopBack_Pickup_UP_BACK = RearTopArms_Starting_Position  - Iteration_Step * (j-1); %m
         Inboard_TopBack_Pickup_AFT_BACK = 0.17; %m
 
-        Inboard_TopFront_Pickup_UP_BACK = RearTopArms_Starting_Position  - Iteration_Step * i; %m
+        Inboard_TopFront_Pickup_UP_BACK = RearTopArms_Starting_Position  - Iteration_Step * (i-1); %m
         Inboard_TopFront_Pickup_FOR_BACK = 0.15; %m
 
         Inboard_BotBack_Pickup_DOWN_BACK = BottomArms_Dist_Limit; %m
@@ -321,7 +328,7 @@ for j=1:Number_Of_Iterations
         CrankL_PickupCOORD_BACK = [0, chassis_width/2, chassis_height/2 + Bell_CrankL_Pickup_Height_BACK];
         ShockL_PickupCOORD_BACK = [0, 0, chassis_height/2 + Shock_Pickup_Height_BACK + Bell_CrankL_Pickup_Height_BACK];
 
-
+        
 
 
         %% CASTER
@@ -473,6 +480,7 @@ for j=1:Number_Of_Iterations
         Angle_LeftTop_Internal = atand(TB_DeltaX_BACK/TB_DeltaY_BACK);
         Angle_RightTop_Internal = atand(TF_DeltaX_BACK/TF_DeltaY_BACK);
         Angle_Top_AOA = atand( (Inboard_TopBack_Pickup_UP-Inboard_TopFront_Pickup_UP)/(Inboard_TopFront_Pickup_FOR+Inboard_TopBack_Pickup_AFT) );
+        Angle_Top_AOA_BACK = atand( (Inboard_TopBack_Pickup_UP_BACK-Inboard_TopFront_Pickup_UP_BACK)/(Inboard_TopFront_Pickup_FOR_BACK+Inboard_TopBack_Pickup_AFT_BACK) );
         Angle_Between_Top_Arms = Angle_LeftTop_Internal + Angle_RightTop_Internal;
 
 
@@ -581,10 +589,10 @@ for j=1:Number_Of_Iterations
         BrownLinePushRod_BACK = Track_Width/2-chassis_rear_width_addition- chassis_width/2 - YellowLinePushRod + BottomCamberBlueLength + OutBot_KingPin_Offset;
         PushRod__2D_Length_BACK = sqrt( (chassis_height + Bell_CrankL_Pickup_Height_BACK + TealLinePushRod + DashedPuplePushRod)^2 + (BrownLinePushRod_BACK)^2 );
 
-        PushRod_Length = sqrt( (PushRod__2D_Length)^2 + (OutBot_Pickup_FOR_AFT)^2 );
+        PushRod_Length = sqrt( (PushRod__2D_Length)^2 + (OutBot_Pickup_FOR_AFT)^2 ) + 0.03;
         PushRod_x_sec = [0 -PushRod_Length/2; 0.75/100 -PushRod_Length/2; 0.75/100 PushRod_Length/2; 0 PushRod_Length/2];
 
-        PushRod_Length_BACK = sqrt( (PushRod__2D_Length_BACK)^2 + (OutBot_Pickup_FOR_AFT)^2 );
+        PushRod_Length_BACK = sqrt( (PushRod__2D_Length_BACK)^2 + (OutBot_Pickup_FOR_AFT)^2 ) + 0.04;
         PushRod_x_sec_BACK = [0 -PushRod_Length_BACK/2; 0.75/100 -PushRod_Length_BACK/2; 0.75/100 PushRod_Length_BACK/2; 0 PushRod_Length_BACK/2];
 
         %% TOE & TIEROD LENGTH
@@ -625,7 +633,22 @@ for j=1:Number_Of_Iterations
         TieRod_x_sec_BACK = [0 -TieRod_Length_BACK/2; 0.75/100 -TieRod_Length_BACK/2; 0.75/100 TieRod_Length_BACK/2; 0 TieRod_Length_BACK/2];
 
 
+        %% PITCH CENTER
+        Guideline_Center_Length = 8; %m
+        Guideline_x_sec = [0 -Guideline_Center_Length/2; 0.5/100 -Guideline_Center_Length/2; 0.5/100 Guideline_Center_Length/2; 0 Guideline_Center_Length/2];
+        Guide_Top_Arm_Dist = sqrt( (Inboard_TopBack_Pickup_AFT + Inboard_TopFront_Pickup_FOR)^2 + (Inboard_TopBack_Pickup_UP - Inboard_TopFront_Pickup_UP)^2 );
+        Guide_Top_Arm_Dist_BACK = sqrt( (Inboard_TopBack_Pickup_AFT_BACK + Inboard_TopFront_Pickup_FOR_BACK)^2 + (Inboard_TopBack_Pickup_UP_BACK - Inboard_TopFront_Pickup_UP_BACK)^2 );
+        
+        Front_Instant_Center = (chassis_height/2 + Inboard_TopFront_Pickup_UP)/tand(Angle_Top_AOA);
+        Back_Instant_Center = (chassis_height/2 + Inboard_TopFront_Pickup_UP_BACK)/tand(Angle_Top_AOA_BACK);
 
+        if Front_Instant_Center == inf || Front_Instant_Center == -inf
+            Front_Instant_Center = 0;
+        end
+
+        if Back_Instant_Center == inf || Back_Instant_Center == -inf
+            Back_Instant_Center = 0;
+        end
 
 
 

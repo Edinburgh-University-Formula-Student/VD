@@ -21,23 +21,24 @@ Roll_Mode = false;
 %%%%%%%%%%%%%%%%%%%%%%%
 % Steering_Mode = true;
 % Travel_Mode = true;
-% Pitch_Mode = true;
-Roll_Mode = true;
+Pitch_Mode = true;
+% Roll_Mode = true;
 %%%%%%%%%%%%%%%%%%%%%%%
 
 chassis_height = 2*207*1/1000; %m
 chassis_length = 1.5; %m
 chassis_width = 0.42; %m
 
-if Roll_Mode || Pitch_Mode
-    Ride_Height = 0.14+0.025;
-else
+% if Roll_Mode || Pitch_Mode
+%     Ride_Height = 0.14+0.038;
+% else
     Ride_Height = 0.14; %m
-end
+% end
 Ride_Height_Block_Height = 0.14;
 Track_Width = 1.575; %m
 Front_Wheelbase = 0.55; %m
-Rear_Wheelbase = 0.87; %m
+% Rear_Wheelbase = 0.87; %m
+Rear_Wheelbase = 1.07; %m
 
 
 
@@ -57,13 +58,13 @@ elseif Travel_Mode
     % (:,:,3) = CamberSlope
     % (:,:,4) = CasterSlope
     % (:,:,5) = ToeSlope
-% elseif Pitch_Mode
-%     Pitch_Slope_Data = zeros(Number_Of_Iterations, Number_Of_Iterations, 5);
-%     % (:,:,1) = TopBackArm
-%     % (:,:,2) = TopFrontArm
-%     % (:,:,3) = CamberSlope
-%     % (:,:,4) = CasterSlope
-%     % (:,:,5) = ToeSlope
+elseif Pitch_Mode
+    Pitch_Slope_Data = zeros(Number_Of_Iterations, Number_Of_Iterations, 5);
+    % (:,:,1) = TopBackArm
+    % (:,:,2) = TopFrontArm
+    % (:,:,3) = CamberSlope
+    % (:,:,4) = CasterSlope
+    % (:,:,5) = ToeSlope
 elseif Roll_Mode
     Roll_Slope_Data = zeros(Number_Of_Iterations, Number_Of_Iterations, 5);
     % (:,:,1) = TopBackArm
@@ -101,9 +102,9 @@ chassis_rear_width_addition = 0.065; %m
 if Travel_Mode
     CAMBER = -1.5 - 0.21; %DEG, Static Camber at ride height
     TOE = -2 - 0.35;
-elseif Roll_Mode || Pitch_Mode
-    CAMBER = -1.5 - 0.9; %DEG, Static Camber at ride height
-    TOE = -2 + 0.35;
+% elseif Roll_Mode || Pitch_Mode
+%     CAMBER = -1.5 - 0.9; %DEG, Static Camber at ride height
+%     TOE = -2 + 0.35;
 else
     CAMBER = -1.5;
     TOE = -2;
@@ -174,10 +175,19 @@ OutTieRod_Pickup_FOR_AFT = -0.07555; %m Positive for FOR, Negative for AFT REAL 
 
 % [innertop(radius, width), innerbottom(radius, -width), outbottom(radius, -width), outtop(radius, width)]
 
-
+%% DRIVESHAFT
 Powertrain_Cone_Length = 1; %m
-Powertrain_Inboard_CV_Joint_Offset = 0.2; %m
-Powertrain_Cone_x_sec = [0, 0; 0, -Powertrain_Cone_Length;Powertrain_Cone_Length*sind(30), -Powertrain_Cone_Length;];
+Powertrain_Inboard_CV_Joint_Offset = 0.1385; %m
+Powertrain_Cone_x_sec = [0, 0; 0, -Powertrain_Cone_Length;Powertrain_Cone_Length*sind(12), -Powertrain_Cone_Length;];
+
+
+
+
+%% PITCH CENTER
+Guideline_Center_Length = 4; %m
+Guideline_x_sec = [0 -Guideline_Center_Length/2; 0.75/100 -Guideline_Center_Length/2; 0.75/100 Guideline_Center_Length/2; 0 Guideline_Center_Length/2];
+Guide_Top_Arm_Dist = sqrt( (Inboard_TopBack_Pickup_AFT + Inboard_TopFront_Pickup_FOR)^2 + (Inboard_TopBack_Pickup_UP - Inboard_TopFront_Pickup_UP)^2 );
+
 
 
 
@@ -581,10 +591,10 @@ for j=1:Number_Of_Iterations
         BrownLinePushRod_BACK = Track_Width/2-chassis_rear_width_addition- chassis_width/2 - YellowLinePushRod + BottomCamberBlueLength + OutBot_KingPin_Offset;
         PushRod__2D_Length_BACK = sqrt( (chassis_height + Bell_CrankL_Pickup_Height_BACK + TealLinePushRod + DashedPuplePushRod)^2 + (BrownLinePushRod_BACK)^2 );
 
-        PushRod_Length = sqrt( (PushRod__2D_Length)^2 + (OutBot_Pickup_FOR_AFT)^2 );
+        PushRod_Length = sqrt( (PushRod__2D_Length)^2 + (OutBot_Pickup_FOR_AFT)^2 ) + 0.03;
         PushRod_x_sec = [0 -PushRod_Length/2; 0.75/100 -PushRod_Length/2; 0.75/100 PushRod_Length/2; 0 PushRod_Length/2];
 
-        PushRod_Length_BACK = sqrt( (PushRod__2D_Length_BACK)^2 + (OutBot_Pickup_FOR_AFT)^2 );
+        PushRod_Length_BACK = sqrt( (PushRod__2D_Length_BACK)^2 + (OutBot_Pickup_FOR_AFT)^2 ) + 0.04;
         PushRod_x_sec_BACK = [0 -PushRod_Length_BACK/2; 0.75/100 -PushRod_Length_BACK/2; 0.75/100 PushRod_Length_BACK/2; 0 PushRod_Length_BACK/2];
 
         %% TOE & TIEROD LENGTH
@@ -821,9 +831,8 @@ for j=1:Number_Of_Iterations
         % Pi frequency, -3*pi/4 phase sine wave, 2000 amplitude, time 2->3
 
         if Pitch_Mode == true
-            pitch_Time_Index_Start = 201;
-            pitch_Time_Index_End = 301;
-
+            pitch_Time_Index_Start = 151;
+            pitch_Time_Index_End = 251;
 
             pitch_camber = camberOutput(pitch_Time_Index_Start:pitch_Time_Index_End);
             pitch_toe = toeOutput(pitch_Time_Index_Start:pitch_Time_Index_End);
@@ -831,6 +840,43 @@ for j=1:Number_Of_Iterations
             pitch_dive = diveOutput(pitch_Time_Index_Start:pitch_Time_Index_End);
             pitch_squat = squatOutput(pitch_Time_Index_Start:pitch_Time_Index_End);
             pitch_pitch = out.CTC.signals(7).values(pitch_Time_Index_Start:pitch_Time_Index_End);
+
+            Pitch_Slope_Data(i,j,1) = Inboard_TopBack_Pickup_UP - TopArms_Starting_Position;
+            Pitch_Slope_Data(i,j,2) = Inboard_TopFront_Pickup_UP - TopArms_Starting_Position;
+            Pitch_Slope_Data(i,j,3) = (pitch_camber(end) - pitch_camber(1)) / (pitch_pitch(end) - pitch_pitch(1));
+            Pitch_Slope_Data(i,j,4) = (pitch_caster(end) - pitch_caster(1)) / (pitch_pitch(end) - pitch_pitch(1));
+            Pitch_Slope_Data(i,j,5) = (pitch_toe(end) - pitch_toe(1)) / (pitch_pitch(end) - pitch_pitch(1));
+
+            hold on
+            subplot(2,3,1)
+            plot(pitch_pitch, pitch_camber, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
+            xline(0, '--')
+            yline(CAMBER + 0.9, '--')
+            grid on
+            xlabel("Pitch")
+            ylabel("Camber")
+            % hold off
+
+            hold on
+            subplot(2,3,2)
+            plot(pitch_pitch, pitch_caster, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
+            xline(0, '--')
+            yline(CASTER, '--')
+            grid on
+            xlabel("Pitch")
+            ylabel("Caster")
+            % hold off
+
+            hold on
+            subplot(2,3,3)
+            plot(pitch_pitch, pitch_toe, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
+            xline(0, '--')
+            yline(TOE - 0.35, '--')
+            grid on
+            xlabel("Pitch")
+            ylabel("Toe")
+            % hold off
+
 
             % hold on
             % subplot(2,3,1)
@@ -896,8 +942,8 @@ for j=1:Number_Of_Iterations
 
         %% ROLL
         if Roll_Mode == true
-            roll_Time_Index_Start = 201;
-            roll_Time_Index_End = 301;
+            roll_Time_Index_Start = 151;
+            roll_Time_Index_End = 251;
 
 
             roll_camber = camberOutput(roll_Time_Index_Start:roll_Time_Index_End);
@@ -917,7 +963,7 @@ for j=1:Number_Of_Iterations
             subplot(2,3,1)
             plot(roll_roll, roll_camber, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
             xline(0, '--')
-            yline(CAMBER, '--')
+            yline(CAMBER + 0.9, '--')
             grid on
             xlabel("Roll")
             ylabel("Camber")
@@ -937,7 +983,7 @@ for j=1:Number_Of_Iterations
             subplot(2,3,3)
             plot(roll_roll, roll_toe, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
             xline(0, '--')
-            yline(TOE, '--')
+            yline(TOE - 0.35, '--')
             grid on
             xlabel("Roll")
             ylabel("Toe")
@@ -1012,6 +1058,32 @@ if Steering_Mode
     xlabel("Back Arm Position")
     ylabel("Front Arm Position")
     zlabel("Slope of Caster vs Steering Angle")
+    colormap winter
+
+
+end
+
+if Pitch_Mode
+    % Coordinates
+    subplot(2,3,4)
+    surf(Pitch_Slope_Data(:,:,1), Pitch_Slope_Data(:,:,2), Pitch_Slope_Data(:,:,3))
+    xlabel("Back Arm Position")
+    ylabel("Front Arm Position")
+    zlabel("Slope of Camber vs Pitch")
+    colormap winter
+
+    subplot(2,3,5)
+    surf(Pitch_Slope_Data(:,:,1), Pitch_Slope_Data(:,:,2), Pitch_Slope_Data(:,:,4))
+    xlabel("Back Arm Position")
+    ylabel("Front Arm Position")
+    zlabel("Slope of Caster vs Pitch")
+    colormap winter
+
+    subplot(2,3,6)
+    surf(Pitch_Slope_Data(:,:,1), Pitch_Slope_Data(:,:,2), Pitch_Slope_Data(:,:,5))
+    xlabel("Back Arm Position")
+    ylabel("Front Arm Position")
+    zlabel("Slope of Toe vs Pitch")
     colormap winter
 
 
