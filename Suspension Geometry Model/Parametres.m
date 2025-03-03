@@ -1,7 +1,7 @@
 %% University of Edinburgh Formula Student
 % Suspension Geometry Simulator
 % Paul Wang, Vehicle Dynamics
-% Winter 2024
+% Winter 2024, Spring 2025
 
 clear
 close all
@@ -12,17 +12,20 @@ set(0,'DefaultFigureWindowStyle','docked')
 % wheel. Acceleration and braking should be near 0
 
 % Ballpark initial static camber = -1.5
-
+ 
 Steering_Mode = false;
 Travel_Mode = false;
 Pitch_Mode = false;
 Roll_Mode = false;
+Motion_Ratio = false;
 
 %%%%%%%%%%%%%%%%%%%%%%%
 % Steering_Mode = true;
 % Travel_Mode = true;
 Pitch_Mode = true;
 % Roll_Mode = true;
+
+% Motion_Ratio = true;
 %%%%%%%%%%%%%%%%%%%%%%%
 
 chassis_height = 2*207*1/1000; %m
@@ -42,7 +45,11 @@ Rear_Wheelbase = 1.07; %m
 
 
 
-Number_Of_Iterations = 3;
+if Travel_Mode && Motion_Ratio
+    Number_Of_Iterations = 1;
+else
+    Number_Of_Iterations = 3;
+end
 Iteration_Step = 0.02; %m
 
 if Steering_Mode
@@ -60,6 +67,7 @@ elseif Travel_Mode
     % (:,:,5) = ToeSlope
 elseif Pitch_Mode
     Pitch_Slope_Data = zeros(Number_Of_Iterations, Number_Of_Iterations, 5);
+    % Motion_Ratio_Data = zeros(101,1)
     % (:,:,1) = TopBackArm
     % (:,:,2) = TopFrontArm
     % (:,:,3) = CamberSlope
@@ -93,6 +101,8 @@ TopArms_Lower_Bound = TopArms_Starting_Position - Height_Of_Suspension_Window/2;
 
 TopArms_Veritcal_Iteration_Step = (TopArms_Upper_Bound-TopArms_Lower_Bound)/Number_Of_Iterations;
 Height_Of_Suspension_Window = Height_Of_Suspension_Window - TopArms_Veritcal_Iteration_Step;
+
+if Height_Of_Suspension_Window == 0; Height_Of_Suspension_Window=0.001; end
 
 RearTopArms_Starting_Position = -0.08;
 
@@ -150,8 +160,13 @@ AngleBetweenBlueAndWhiteLine = Bell_CrankL_Chassis_Desired_Angle + atand((0.5*ch
 PurpleLineLength = sqrt(  (BlueLineLength^2) + (Bell_CrankL_Height^2) - 2*BlueLineLength*Bell_CrankL_Height*cosd(AngleBetweenBlueAndWhiteLine) );
 PistonL_Neutral_Displacement = PurpleLineLength - (Piston_Length);
 
-Spring_Stiffness = 350; %LBS/IN = 61294nm REAL VALUE
-Damping_Coefficient = 1000;
+% Spring_Stiffness = 350; %LBS/IN = 61294nm REAL VALUE
+Spring_Stiffness = 60 * 5.71015; %N/MM ROBERTO VALUE
+if Travel_Mode && Motion_Ratio
+    Damping_Coefficient = 0;
+else
+    Damping_Coefficient = 1000;
+end
 
 % -------------------------
 % 0.2057 m
@@ -751,6 +766,13 @@ for j=1:Number_Of_Iterations
             travel_camber = camberOutput(travel_Time_Index_Start:travel_Time_Index_End);
             travel_toe = toeOutput(travel_Time_Index_Start:travel_Time_Index_End);
             travel_caster = casterOutput(travel_Time_Index_Start:travel_Time_Index_End);
+
+            if Motion_Ratio
+                travel_piston = out.CTC.signals(5).values(travel_Time_Index_Start:travel_Time_Index_End);
+                Motion_Ratio_Data = (max(travel_rideheight)-min(travel_rideheight))/(max(travel_piston)-min(travel_piston));
+            end
+
+            
 
             % (:,:,1) = TopBackArm
             % (:,:,2) = TopFrontArm

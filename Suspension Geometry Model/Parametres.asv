@@ -1,7 +1,7 @@
 %% University of Edinburgh Formula Student
 % Suspension Geometry Simulator
 % Paul Wang, Vehicle Dynamics
-% Winter 2024
+% Winter 2024, Spring 2025
 
 clear
 close all
@@ -17,12 +17,14 @@ Steering_Mode = false;
 Travel_Mode = false;
 Pitch_Mode = false;
 Roll_Mode = false;
+Motion_Ratio = false;
 
 %%%%%%%%%%%%%%%%%%%%%%%
 % Steering_Mode = true;
-% Travel_Mode = true;
-Pitch_Mode = true;
+Travel_Mode = true;
+% Pitch_Mode = true;
 % Roll_Mode = true;
+Motion_Ratio = true;
 %%%%%%%%%%%%%%%%%%%%%%%
 
 chassis_height = 2*207*1/1000; %m
@@ -42,7 +44,11 @@ Rear_Wheelbase = 1.07; %m
 
 
 
-Number_Of_Iterations = 3;
+if Travel_Mode && Motion_Ratio
+    Number_Of_Iterations = 1;
+else
+    Number_Of_Iterations = 3;
+end
 Iteration_Step = 0.02; %m
 
 if Steering_Mode
@@ -60,6 +66,7 @@ elseif Travel_Mode
     % (:,:,5) = ToeSlope
 elseif Pitch_Mode
     Pitch_Slope_Data = zeros(Number_Of_Iterations, Number_Of_Iterations, 5);
+    Motion_Ratio_Data = zeros(101,1)
     % (:,:,1) = TopBackArm
     % (:,:,2) = TopFrontArm
     % (:,:,3) = CamberSlope
@@ -150,8 +157,13 @@ AngleBetweenBlueAndWhiteLine = Bell_CrankL_Chassis_Desired_Angle + atand((0.5*ch
 PurpleLineLength = sqrt(  (BlueLineLength^2) + (Bell_CrankL_Height^2) - 2*BlueLineLength*Bell_CrankL_Height*cosd(AngleBetweenBlueAndWhiteLine) );
 PistonL_Neutral_Displacement = PurpleLineLength - (Piston_Length);
 
-Spring_Stiffness = 350; %LBS/IN = 61294nm REAL VALUE
-Damping_Coefficient = 1000;
+% Spring_Stiffness = 350; %LBS/IN = 61294nm REAL VALUE
+Spring_Stiffness = 60 * 5.71015; %N/MM ROBERTO VALUE
+if Travel_Mode && Motion_Ratio
+    Damping_Coefficient = 0;
+else
+    Damping_Coefficient = 1000;
+end
 
 % -------------------------
 % 0.2057 m
@@ -183,10 +195,7 @@ Powertrain_Cone_x_sec = [0, 0; 0, -Powertrain_Cone_Length;Powertrain_Cone_Length
 
 
 
-%% PITCH CENTER
-Guideline_Center_Length = 4; %m
-Guideline_x_sec = [0 -Guideline_Center_Length/2; 0.75/100 -Guideline_Center_Length/2; 0.75/100 Guideline_Center_Length/2; 0 Guideline_Center_Length/2];
-Guide_Top_Arm_Dist = sqrt( (Inboard_TopBack_Pickup_AFT + Inboard_TopFront_Pickup_FOR)^2 + (Inboard_TopBack_Pickup_UP - Inboard_TopFront_Pickup_UP)^2 );
+
 
 
 
@@ -225,10 +234,10 @@ for j=1:Number_Of_Iterations
         TieRod_Pickup_Dist = 0.15; %m
         TieRod_Pickup_FOR_AFT = -0.07555; %m Positive for FOR, Negative for AFT
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        Inboard_TopBack_Pickup_UP_BACK = RearTopArms_Starting_Position  - Iteration_Step * i; %m
+        Inboard_TopBack_Pickup_UP_BACK = RearTopArms_Starting_Position  - Iteration_Step * (j-1); %m
         Inboard_TopBack_Pickup_AFT_BACK = 0.17; %m
 
-        Inboard_TopFront_Pickup_UP_BACK = RearTopArms_Starting_Position  - Iteration_Step * i; %m
+        Inboard_TopFront_Pickup_UP_BACK = RearTopArms_Starting_Position  - Iteration_Step * (i-1); %m
         Inboard_TopFront_Pickup_FOR_BACK = 0.15; %m
 
         Inboard_BotBack_Pickup_DOWN_BACK = BottomArms_Dist_Limit; %m
@@ -331,7 +340,7 @@ for j=1:Number_Of_Iterations
         CrankL_PickupCOORD_BACK = [0, chassis_width/2, chassis_height/2 + Bell_CrankL_Pickup_Height_BACK];
         ShockL_PickupCOORD_BACK = [0, 0, chassis_height/2 + Shock_Pickup_Height_BACK + Bell_CrankL_Pickup_Height_BACK];
 
-
+        
 
 
         %% CASTER
@@ -483,6 +492,7 @@ for j=1:Number_Of_Iterations
         Angle_LeftTop_Internal = atand(TB_DeltaX_BACK/TB_DeltaY_BACK);
         Angle_RightTop_Internal = atand(TF_DeltaX_BACK/TF_DeltaY_BACK);
         Angle_Top_AOA = atand( (Inboard_TopBack_Pickup_UP-Inboard_TopFront_Pickup_UP)/(Inboard_TopFront_Pickup_FOR+Inboard_TopBack_Pickup_AFT) );
+        Angle_Top_AOA_BACK = atand( (Inboard_TopBack_Pickup_UP_BACK-Inboard_TopFront_Pickup_UP_BACK)/(Inboard_TopFront_Pickup_FOR_BACK+Inboard_TopBack_Pickup_AFT_BACK) );
         Angle_Between_Top_Arms = Angle_LeftTop_Internal + Angle_RightTop_Internal;
 
 
@@ -635,7 +645,22 @@ for j=1:Number_Of_Iterations
         TieRod_x_sec_BACK = [0 -TieRod_Length_BACK/2; 0.75/100 -TieRod_Length_BACK/2; 0.75/100 TieRod_Length_BACK/2; 0 TieRod_Length_BACK/2];
 
 
+        %% PITCH CENTER
+        Guideline_Center_Length = 8; %m
+        Guideline_x_sec = [0 -Guideline_Center_Length/2; 0.5/100 -Guideline_Center_Length/2; 0.5/100 Guideline_Center_Length/2; 0 Guideline_Center_Length/2];
+        Guide_Top_Arm_Dist = sqrt( (Inboard_TopBack_Pickup_AFT + Inboard_TopFront_Pickup_FOR)^2 + (Inboard_TopBack_Pickup_UP - Inboard_TopFront_Pickup_UP)^2 );
+        Guide_Top_Arm_Dist_BACK = sqrt( (Inboard_TopBack_Pickup_AFT_BACK + Inboard_TopFront_Pickup_FOR_BACK)^2 + (Inboard_TopBack_Pickup_UP_BACK - Inboard_TopFront_Pickup_UP_BACK)^2 );
+        
+        Front_Instant_Center = (chassis_height/2 + Inboard_TopFront_Pickup_UP)/tand(Angle_Top_AOA);
+        Back_Instant_Center = (chassis_height/2 + Inboard_TopFront_Pickup_UP_BACK)/tand(Angle_Top_AOA_BACK);
 
+        if Front_Instant_Center == inf || Front_Instant_Center == -inf
+            Front_Instant_Center = 0;
+        end
+
+        if Back_Instant_Center == inf || Back_Instant_Center == -inf
+            Back_Instant_Center = 0;
+        end
 
 
 
@@ -738,6 +763,12 @@ for j=1:Number_Of_Iterations
             travel_camber = camberOutput(travel_Time_Index_Start:travel_Time_Index_End);
             travel_toe = toeOutput(travel_Time_Index_Start:travel_Time_Index_End);
             travel_caster = casterOutput(travel_Time_Index_Start:travel_Time_Index_End);
+
+            if Motion_Ratio
+                travel_piston = out.CTC.signals(5).values(travel_Time_Index_Start:travel_Time_Index_End);
+            end
+
+            Motion_Ratio_Data = travel_rideheight/travel_piston
 
             % (:,:,1) = TopBackArm
             % (:,:,2) = TopFrontArm
