@@ -22,8 +22,8 @@ Motion_Ratio = false;
 %%%%%%%%%%%%%%%%%%%%%%%
 % Steering_Mode = true;
 % Travel_Mode = true;
-Pitch_Mode = true;
-% Roll_Mode = true;
+% Pitch_Mode = true;
+Roll_Mode = true;
 
 % Motion_Ratio = true;
 %%%%%%%%%%%%%%%%%%%%%%%
@@ -40,8 +40,8 @@ chassis_width = 0.42; %m
 Ride_Height_Block_Height = 0.14;
 Track_Width = 1.575; %m
 Front_Wheelbase = 0.561; %m
-% Rear_Wheelbase = 0.87; %m
-Rear_Wheelbase = 1.08; %m
+% Rear_Wheelbase = 1.08; %m MINIMUM
+Rear_Wheelbase = 1.11; %m 8° STATIC
 
 
 
@@ -170,6 +170,7 @@ Rim_x_sec = [Rim_Outer_Radius-Rim_Thickness Wheel_width/2; Rim_Outer_Radius-Rim_
 Tyre_x_sec = [Wheel_radius-Tyre_Wall_Thickness Wheel_width/2; Wheel_radius-Tyre_Wall_Thickness -Wheel_width/2; Wheel_radius -Wheel_width/2; Wheel_radius Wheel_width/2];
 % ------------------------
 
+Track_Width = Track_Width+Wheel_radius; %m
 
 OutTop_Pickup_Dist = 0.06948184943; %m REAL VALUE
 OutBot_Pickup_Dist = 0.07778083697; %m REAL VALUE
@@ -189,7 +190,7 @@ Powertrain_Inboard_CV_Joint_Offset_For_Aft = 26.17; %mm SOLIDWORKS/SIMSCAPE X
 Powertrain_Outboard_CV_Offset_Inboard_Outboard = 31.82; %mm
 
 Powertrain_Cone_Length = Track_Width/2 + Wheel_width/2 - Powertrain_Inboard_CV_Joint_Offset_Inboard_Outboard/1000 - Powertrain_Outboard_CV_Offset_Inboard_Outboard/1000; %m
-Powertrain_Cone_x_sec = [0, 0; 0, -Powertrain_Cone_Length;Powertrain_Cone_Length*sind(12), -Powertrain_Cone_Length;];
+Powertrain_Cone_x_sec = [0, 0; 0, -Powertrain_Cone_Length;Powertrain_Cone_Length*sind(8), -Powertrain_Cone_Length;];
 
 Driveshaft_Length = Track_Width/2; %m
 Driveshaft_Radius = 10 / 1000; %mm
@@ -238,7 +239,8 @@ for j=1:Number_Of_Iterations
         % Inboard_TopBack_Pickup_UP_BACK = RearTopArms_Upper_Bound  - TopArms_Veritcal_Iteration_Step * (j-1); %m
         % Inboard_TopBack_Pickup_UP_BACK = RearTopArms_Starting_Position; %m
         Inboard_TopBack_Pickup_UP_BACK = RearTopArms_Upper_Bound - TopArms_Veritcal_Iteration_Step * (j-1);
-        Inboard_TopBack_Pickup_AFT_BACK = 0.12; %m
+        Inboard_TopBack_Pickup_AFT_BACK = 0.095; %m
+        % Inboard_TopBack_Pickup_AFT_BACK = 0.12; %m MINIMUM
 
         % Inboard_TopFront_Pickup_UP_BACK = RearTopArms_Upper_Bound  - TopArms_Veritcal_Iteration_Step * (i-1); %m
         % Inboard_TopFront_Pickup_UP_BACK = RearTopArms_Starting_Position; %m
@@ -246,7 +248,7 @@ for j=1:Number_Of_Iterations
         Inboard_TopFront_Pickup_FOR_BACK = 0.2; %m
 
         Inboard_BotBack_Pickup_DOWN_BACK = BottomArms_Dist_Limit; %m
-        Inboard_BotBack_Pickup_AFT_BACK = 0.12; %m
+        Inboard_BotBack_Pickup_AFT_BACK = 0.095; %m
 
         Inboard_BotFront_Pickup_DOWN_BACK = BottomArms_Dist_Limit; %m
         Inboard_BotFront_Pickup_FOR_BACK = 0.2; %m
