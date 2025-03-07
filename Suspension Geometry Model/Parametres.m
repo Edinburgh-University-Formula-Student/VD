@@ -62,9 +62,10 @@ if Steering_Mode
 elseif Travel_Mode
     Travel_Slope_Data = zeros(Number_Of_Iterations, Number_Of_Iterations, 5);
 elseif Pitch_Mode
+    % (:,:,6) = RollCenterDistance
     Pitch_Slope_Data = zeros(Number_Of_Iterations, Number_Of_Iterations, 8);
 elseif Roll_Mode
-    Roll_Slope_Data = zeros(Number_Of_Iterations, Number_Of_Iterations, 5);
+    Roll_Slope_Data = zeros(Number_Of_Iterations, Number_Of_Iterations, 6);
 end
 
 simIn = Simulink.SimulationInput("SGS_3D_1");
@@ -707,6 +708,7 @@ for j=1:Number_Of_Iterations
             camberOutputREAR = out.CTCREAR.signals(1).values;
             toeOutputREAR = out.CTCREAR.signals(2).values;
             casterOutputREAR = out.CTCREAR.signals(3).values;
+
         end
 
 
@@ -715,14 +717,16 @@ for j=1:Number_Of_Iterations
         toeOutput = out.CTC.signals(2).values;
         casterOutput = out.CTC.signals(3).values;
 
-        
+
 
 
         if Roll_Mode
             rollOutput = out.CTC.signals(6).values;
+            
         elseif Pitch_Mode
             diveOutput = out.CTC.signals(4).values;
             squatOutput = out.CTC.signals(5).values;
+
         end
 
 
@@ -736,6 +740,7 @@ for j=1:Number_Of_Iterations
             steering_toe = toeOutput(steering_Time_Index_Start:steering_Time_Index_End);
             steering_caster = casterOutput(steering_Time_Index_Start:steering_Time_Index_End);
             steering_angle = steering_toe + TOE;
+            
 
 
             Steering_Slope_Data(i,j,1) = Inboard_TopBack_Pickup_UP - TopArms_Starting_Position;
@@ -885,10 +890,12 @@ for j=1:Number_Of_Iterations
             % pitch_dive = diveOutput(pitch_Time_Index_Start:pitch_Time_Index_End);
             % pitch_squat = squatOutput(pitch_Time_Index_Start:pitch_Time_Index_End);
             pitch_pitch = out.CTC.signals(7).values(pitch_Time_Index_Start:pitch_Time_Index_End);
+            pitch_pitch_center_distance = rollCenterOutput(201);
 
             pitch_camberREAR = camberOutputREAR(pitch_Time_Index_Start:pitch_Time_Index_End);
             pitch_toeREAR = toeOutputREAR(pitch_Time_Index_Start:pitch_Time_Index_End);
             pitch_casterREAR = casterOutputREAR(pitch_Time_Index_Start:pitch_Time_Index_End);
+
 
             Pitch_Slope_Data(i,j,1) = Inboard_TopBack_Pickup_UP - TopArms_Starting_Position;
             Pitch_Slope_Data(i,j,2) = Inboard_TopFront_Pickup_UP - TopArms_Starting_Position;
@@ -1032,17 +1039,19 @@ for j=1:Number_Of_Iterations
             roll_toe = toeOutput(roll_Time_Index_Start:roll_Time_Index_End);
             roll_caster = casterOutput(roll_Time_Index_Start:roll_Time_Index_End);
             roll_roll = rollOutput(roll_Time_Index_Start:roll_Time_Index_End);
+            % rollCenterOutput = out.CTC.signals(8).values;
+            roll_roll_center_distance = out.CTC.signals(8).values(201);
 
             Roll_Slope_Data(i,j,1) = Inboard_TopBack_Pickup_UP - TopArms_Starting_Position;
             Roll_Slope_Data(i,j,2) = Inboard_TopFront_Pickup_UP - TopArms_Starting_Position;
             Roll_Slope_Data(i,j,3) = (roll_camber(end) - roll_camber(1)) / (roll_roll(end) - roll_roll(1));
             Roll_Slope_Data(i,j,4) = (roll_caster(end) - roll_caster(1)) / (roll_roll(end) - roll_roll(1));
             Roll_Slope_Data(i,j,5) = (roll_toe(end) - roll_toe(1)) / (roll_roll(end) - roll_roll(1));
-
+            Roll_Slope_Data(i,j,6) = roll_roll_center_distance;
 
 
             hold on
-            subplot(2,3,1)
+            subplot(3,3,1)
             plot(roll_roll, roll_camber, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
             xline(0, '--')
             yline(CAMBER + 0.9, '--')
@@ -1052,7 +1061,7 @@ for j=1:Number_Of_Iterations
             % hold off
 
             hold on
-            subplot(2,3,2)
+            subplot(3,3,2)
             plot(roll_roll, roll_caster, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
             xline(0, '--')
             yline(CASTER, '--')
@@ -1062,7 +1071,7 @@ for j=1:Number_Of_Iterations
             % hold off
 
             hold on
-            subplot(2,3,3)
+            subplot(3,3,3)
             plot(roll_roll, roll_toe, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
             xline(0, '--')
             yline(TOE - 0.35, '--')
@@ -1193,25 +1202,32 @@ end
 
 if Roll_Mode
     % Coordinates
-    subplot(2,3,4)
+    subplot(3,3,4)
     surf(Roll_Slope_Data(:,:,1), Roll_Slope_Data(:,:,2), Roll_Slope_Data(:,:,3))
     xlabel("Back Arm Position")
     ylabel("Front Arm Position")
     zlabel("Slope of Camber vs Roll")
     colormap winter
 
-    subplot(2,3,5)
+    subplot(3,3,5)
     surf(Roll_Slope_Data(:,:,1), Roll_Slope_Data(:,:,2), Roll_Slope_Data(:,:,4))
     xlabel("Back Arm Position")
     ylabel("Front Arm Position")
     zlabel("Slope of Caster vs Roll")
     colormap winter
 
-    subplot(2,3,6)
+    subplot(3,3,6)
     surf(Roll_Slope_Data(:,:,1), Roll_Slope_Data(:,:,2), Roll_Slope_Data(:,:,5))
     xlabel("Back Arm Position")
     ylabel("Front Arm Position")
     zlabel("Slope of Toe vs Roll")
+    colormap winter
+
+    subplot(3,3,8)
+    surf(Roll_Slope_Data(:,:,1), Roll_Slope_Data(:,:,2), Roll_Slope_Data(:,:,6))
+    xlabel("Back Arm Position")
+    ylabel("Front Arm Position")
+    zlabel("Roll Center Distance vs Roll")
     colormap winter
 
 
