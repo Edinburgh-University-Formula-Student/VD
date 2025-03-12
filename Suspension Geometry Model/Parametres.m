@@ -18,14 +18,16 @@ Travel_Mode = false;
 Pitch_Mode = false;
 Roll_Mode = false;
 Motion_Ratio = false;
+Roll_Center = false;
 
 %%%%%%%%%%%%%%%%%%%%%%%
-% Steering_Mode = true;
+Steering_Mode = true;
 % Travel_Mode = true;
 % Pitch_Mode = true;
-Roll_Mode = true;
+% Roll_Mode = true;
 
 % Motion_Ratio = true;
+% Roll_Center = true;
 %%%%%%%%%%%%%%%%%%%%%%%
 
 chassis_height = 2*207*1/1000; %m
@@ -82,7 +84,7 @@ TopArms_Starting_Position = -0.06; % REAL VALUE
 RearTopArms_Starting_Position = -0.08;
 
 
-Height_Of_Suspension_Window = 0.12;
+Height_Of_Suspension_Window = 0.18;
 TopArms_Upper_Bound = TopArms_Starting_Position + Height_Of_Suspension_Window/2;
 TopArms_Lower_Bound = TopArms_Starting_Position - Height_Of_Suspension_Window/2;
 RearTopArms_Upper_Bound = RearTopArms_Starting_Position + Height_Of_Suspension_Window/2;
@@ -151,12 +153,16 @@ PurpleLineLength = sqrt(  (BlueLineLength^2) + (Bell_CrankL_Height^2) - 2*BlueLi
 PistonL_Neutral_Displacement = PurpleLineLength - (Piston_Length);
 
 % Spring_Stiffness = 350; %LBS/IN = 61294nm REAL VALUE
-Spring_Stiffness = 60 * 5.71015; %N/MM -> LBS/IN ROBERTO VALUE
+% Spring_Stiffness = 60 * 5.71015; %N/MM -> LBS/IN ROBERTO VALUE
+Front_Spring_Stiffness = 30000; %NM ROBERTO VALUE
+Rear_Spring_Stiffness = 40000; %NM ROBERTO VALUE
 if Travel_Mode && Motion_Ratio
     Damping_Coefficient = 0;
 else
-    Damping_Coefficient = 1000;
+    Damping_Coefficient = 1500; %1500 Ns/m ROBERTO VALUE
 end
+
+
 
 % -------------------------
 % 0.2057 m
@@ -214,12 +220,18 @@ for j=1:Number_Of_Iterations
     for i=1:Number_Of_Iterations
         disp(string((j-1)*Number_Of_Iterations + i-1) + "/" + string(Number_Of_Iterations^2) + ", " + string(((j-1)*Number_Of_Iterations + i-1)/(Number_Of_Iterations^2)) + "%")
         % clearvars -except Steering_Mode Travel_Mode Pitch_Mode Roll_Mode Number_Of_Iterations Iteration_Step i
+
+        
         %% VARIABLES
 
 
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         % Inboard_TopBack_Pickup_UP = TopArms_Starting_Position - Iteration_Step * (i-1); %m
-        Inboard_TopBack_Pickup_UP = TopArms_Upper_Bound - TopArms_Veritcal_Iteration_Step * (i-1); %m
+        if Roll_Center == true
+            Inboard_TopBack_Pickup_UP = TopArms_Upper_Bound - TopArms_Veritcal_Iteration_Step * (j-1); %m
+        else
+            Inboard_TopBack_Pickup_UP = TopArms_Upper_Bound - TopArms_Veritcal_Iteration_Step * (i-1); %m
+        end
         Inboard_TopBack_Pickup_AFT = Arms_FOR_AFT_Position; %m
         front_chassis_top_back_offset = tand(Plane_Pickup_Angle) * (chassis_height/2 - abs(Inboard_TopBack_Pickup_UP));
 
@@ -245,7 +257,11 @@ for j=1:Number_Of_Iterations
 
         % Inboard_TopFront_Pickup_UP_BACK = RearTopArms_Upper_Bound  - TopArms_Veritcal_Iteration_Step * (i-1); %m
         % Inboard_TopFront_Pickup_UP_BACK = RearTopArms_Starting_Position; %m
-        Inboard_TopFront_Pickup_UP_BACK =  RearTopArms_Upper_Bound - TopArms_Veritcal_Iteration_Step * (i-1);
+        if Roll_Center == true
+            Inboard_TopFront_Pickup_UP_BACK =  RearTopArms_Upper_Bound - TopArms_Veritcal_Iteration_Step * (j-1);
+        else
+            Inboard_TopFront_Pickup_UP_BACK =  RearTopArms_Upper_Bound - TopArms_Veritcal_Iteration_Step * (i-1);
+        end
         Inboard_TopFront_Pickup_FOR_BACK = 0.2; %m
 
         Inboard_BotBack_Pickup_DOWN_BACK = BottomArms_Dist_Limit; %m
@@ -1080,6 +1096,12 @@ for j=1:Number_Of_Iterations
             ylabel("Toe")
             % hold off
 
+        end
+
+        if Roll_Center == true
+            % i=Number_Of_Iterations
+            break
+            % disp(i)
         end
 
 
