@@ -21,10 +21,10 @@ Motion_Ratio = false;
 Roll_Center = false;
 
 %%%%%%%%%%%%%%%%%%%%%%%
-Steering_Mode = true;
+% Steering_Mode = true;
 % Travel_Mode = true;
 % Pitch_Mode = true;
-% Roll_Mode = true;
+Roll_Mode = true;
 
 % Motion_Ratio = true;
 % Roll_Center = true;
@@ -40,10 +40,10 @@ chassis_width = 0.42; %m
     Ride_Height = 0.14; %m
 % end
 Ride_Height_Block_Height = 0.14;
-Track_Width = 1.575; %m
+Track_Width = 1.300;  %m 1300mm ROBERTO VALUE
 Front_Wheelbase = 0.561; %m
 % Rear_Wheelbase = 1.08; %m MINIMUM
-Rear_Wheelbase = 1.11; %m 8° STATIC
+Rear_Wheelbase = 1.01; %m 
 
 
 
@@ -84,7 +84,7 @@ TopArms_Starting_Position = -0.06; % REAL VALUE
 RearTopArms_Starting_Position = -0.08;
 
 
-Height_Of_Suspension_Window = 0.18;
+Height_Of_Suspension_Window = 0.12;
 TopArms_Upper_Bound = TopArms_Starting_Position + Height_Of_Suspension_Window/2;
 TopArms_Lower_Bound = TopArms_Starting_Position - Height_Of_Suspension_Window/2;
 RearTopArms_Upper_Bound = RearTopArms_Starting_Position + Height_Of_Suspension_Window/2;
@@ -104,18 +104,19 @@ chassis_rear_width_addition = 0.065; %m
 if Travel_Mode
     CAMBER = -1.5 - 0.21; %DEG, Static Camber at ride height
     TOE = -2 - 0.35;
-% elseif Roll_Mode || Pitch_Mode
-%     CAMBER = -1.5 - 0.9; %DEG, Static Camber at ride height
-%     TOE = -2 + 0.35;
+elseif Roll_Mode || Pitch_Mode
+    CAMBER = -1.5 - 0.9; %DEG, Static Camber at ride height
+    TOE = -2 + 0.35;
 else
     CAMBER = -1.5;
     TOE = -2;
 end
 
- %DEG, Static Toe at ride height
+%DEG, Static Toe at ride height
 CASTER = 5.51; %DEG, Static Caster at ride height, 5.51 Real Value
-KINGPIN = 10; %DEG, Kingpin with respect to tyre rim, 17.478 Real Value
-Scrub_Radius = 0; %m, Scrub radius from steering axis to middle of tyre
+% KINGPIN = 17.5; %DEG, Kingpin with respect to tyre rim, 17.478 Real Value
+KINGPIN = 10.5;
+Scrub_Radius = 0.035; %m, Scrub radius from steering axis to middle of tyre
 Scrub_Offset = 0; %m, DO NOT CHANGE! offset from upright to middle of rim, has no effect on KingPin
 
 
@@ -190,9 +191,13 @@ OutTieRod_Pickup_FOR_AFT = -0.07555; %m Positive for FOR, Negative for AFT REAL 
 %% DRIVESHAFT
 
 % Powertrain_Inboard_CV_Joint_Offset = 0.1385; %m
-Powertrain_Inboard_CV_Joint_Offset_Inboard_Outboard = (553.18)/2 - 41.78; %mm SOLIDWORKS/SIMSCAPE Y
-Powertrain_Inboard_CV_Joint_Offset_Up_Down = 70.26; %mm SOLIDWORKS/SIMSCAPE Z
-Powertrain_Inboard_CV_Joint_Offset_For_Aft = 26.17; %mm SOLIDWORKS/SIMSCAPE X
+% Powertrain_Inboard_CV_Joint_Offset_Inboard_Outboard = (553.18)/2 - 41.78; %mm SOLIDWORKS/SIMSCAPE Y
+% Powertrain_Inboard_CV_Joint_Offset_Up_Down = 70.26; %mm SOLIDWORKS/SIMSCAPE Z
+% Powertrain_Inboard_CV_Joint_Offset_For_Aft = 26.17; %mm SOLIDWORKS/SIMSCAPE X
+
+Powertrain_Inboard_CV_Joint_Offset_Inboard_Outboard = (553.18)/2 - 131.76; %mm SOLIDWORKS/SIMSCAPE Y
+Powertrain_Inboard_CV_Joint_Offset_Up_Down = 79.65; %mm SOLIDWORKS/SIMSCAPE Z
+Powertrain_Inboard_CV_Joint_Offset_For_Aft = 48.62;%mm SOLIDWORKS/SIMSCAPE X 
 
 Powertrain_Outboard_CV_Offset_Inboard_Outboard = 31.82; %mm
 
@@ -204,6 +209,7 @@ Driveshaft_Radius = 10 / 1000; %mm
 Driveshaft_x_sec = [0 -Driveshaft_Length/2; Driveshaft_Radius -Driveshaft_Length/2; Driveshaft_Radius Driveshaft_Length/2; 0 Driveshaft_Length/2];
 
 
+Driveshaft_buffer_x_sec = [0 -Driveshaft_Length/2; Driveshaft_Radius+0.020 -Driveshaft_Length/2; Driveshaft_Radius+0.020 Driveshaft_Length/2; 0 Driveshaft_Length/2];
 
 
 
@@ -216,8 +222,8 @@ Tyre_Floor_Plane = -abs(chassis_height/2 + Ride_Height - (Wheel_radius/cosd(CAMB
 
 %% ITERATION
 
-for j=1:Number_Of_Iterations
-    for i=1:Number_Of_Iterations
+for j=Number_Of_Iterations:Number_Of_Iterations
+    for i=Number_Of_Iterations:Number_Of_Iterations
         disp(string((j-1)*Number_Of_Iterations + i-1) + "/" + string(Number_Of_Iterations^2) + ", " + string(((j-1)*Number_Of_Iterations + i-1)/(Number_Of_Iterations^2)) + "%")
         % clearvars -except Steering_Mode Travel_Mode Pitch_Mode Roll_Mode Number_Of_Iterations Iteration_Step i
 
@@ -235,8 +241,8 @@ for j=1:Number_Of_Iterations
         Inboard_TopBack_Pickup_AFT = Arms_FOR_AFT_Position; %m
         front_chassis_top_back_offset = tand(Plane_Pickup_Angle) * (chassis_height/2 - abs(Inboard_TopBack_Pickup_UP));
 
-        % Inboard_TopFront_Pickup_UP = TopArms_Starting_Position - Iteration_Step * (j-1); %m
-        Inboard_TopFront_Pickup_UP = TopArms_Upper_Bound - TopArms_Veritcal_Iteration_Step * (j-1);
+        % Inboard_TopFront_Pickup_UP = TopArms_Upper_Bound - TopArms_Veritcal_Iteration_Step * (j-1);
+        Inboard_TopFront_Pickup_UP = TopArms_Upper_Bound - TopArms_Veritcal_Iteration_Step * (i-1);
         Inboard_TopFront_Pickup_FOR = Arms_FOR_AFT_Position; %m
         front_chassis_top_front_offset = tand(Plane_Pickup_Angle) * (chassis_height/2 - abs(Inboard_TopFront_Pickup_UP));
 
@@ -251,7 +257,8 @@ for j=1:Number_Of_Iterations
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         % Inboard_TopBack_Pickup_UP_BACK = RearTopArms_Upper_Bound  - TopArms_Veritcal_Iteration_Step * (j-1); %m
         % Inboard_TopBack_Pickup_UP_BACK = RearTopArms_Starting_Position; %m
-        Inboard_TopBack_Pickup_UP_BACK = RearTopArms_Upper_Bound - TopArms_Veritcal_Iteration_Step * (j-1);
+        % Inboard_TopBack_Pickup_UP_BACK = RearTopArms_Upper_Bound - TopArms_Veritcal_Iteration_Step * (j-1);
+        Inboard_TopBack_Pickup_UP_BACK = RearTopArms_Upper_Bound - TopArms_Veritcal_Iteration_Step * (i-1);
         Inboard_TopBack_Pickup_AFT_BACK = 0.095; %m
         % Inboard_TopBack_Pickup_AFT_BACK = 0.12; %m MINIMUM
 
@@ -1054,7 +1061,7 @@ for j=1:Number_Of_Iterations
             roll_camber = camberOutput(roll_Time_Index_Start:roll_Time_Index_End);
             roll_toe = toeOutput(roll_Time_Index_Start:roll_Time_Index_End);
             roll_caster = casterOutput(roll_Time_Index_Start:roll_Time_Index_End);
-            roll_roll = rollOutput(roll_Time_Index_Start:roll_Time_Index_End);
+            roll_roll = rollOutput(roll_Time_Index_Start:roll_Time_Index_End); %- 1;
             % rollCenterOutput = out.CTC.signals(8).values;
             roll_roll_center_distance = out.CTC.signals(8).values(201);
 
