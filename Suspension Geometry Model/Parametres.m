@@ -21,10 +21,10 @@ Motion_Ratio = false;
 Roll_Center = false;
 
 %%%%%%%%%%%%%%%%%%%%%%%
-% Steering_Mode = true;
+Steering_Mode = true;
 % Travel_Mode = true;
 % Pitch_Mode = true;
-Roll_Mode = true;
+% Roll_Mode = true;
 
 % Motion_Ratio = true;
 % Roll_Center = true;
@@ -34,15 +34,12 @@ chassis_height = 2*207*1/1000; %m
 chassis_length = 1.5; %m
 chassis_width = 0.42; %m
 
-% if Roll_Mode || Pitch_Mode
-%     Ride_Height = 0.14+0.038;
-% else
-    Ride_Height = 0.14; %m
-% end
+
+Ride_Height = 0.14; %m
+
 Ride_Height_Block_Height = 0.14;
 Track_Width = 1.300;  %m 1300mm ROBERTO VALUE
-Front_Wheelbase = 0.561; %m
-% Rear_Wheelbase = 1.08; %m MINIMUM
+Front_Wheelbase = 0.53; %m 561
 Rear_Wheelbase = 1.01; %m 
 
 
@@ -50,7 +47,7 @@ Rear_Wheelbase = 1.01; %m
 if Travel_Mode && Motion_Ratio
     Number_Of_Iterations = 1;
 else
-    Number_Of_Iterations = 3;
+    Number_Of_Iterations = 4;
 end
 Iteration_Step = 0.02; %m
 
@@ -84,15 +81,13 @@ TopArms_Starting_Position = -0.06; % REAL VALUE
 RearTopArms_Starting_Position = -0.08;
 
 
-Height_Of_Suspension_Window = 0.12;
+Height_Of_Suspension_Window = 0.18;
 TopArms_Upper_Bound = TopArms_Starting_Position + Height_Of_Suspension_Window/2;
 TopArms_Lower_Bound = TopArms_Starting_Position - Height_Of_Suspension_Window/2;
 RearTopArms_Upper_Bound = RearTopArms_Starting_Position + Height_Of_Suspension_Window/2;
 RearTopArms_Lower_Bound = RearTopArms_Starting_Position - Height_Of_Suspension_Window/2;
-
-% TopArms_Veritcal_Iteration_Step = (TopArms_Upper_Bound-TopArms_Lower_Bound)/Number_Of_Iterations;
 TopArms_Veritcal_Iteration_Step = Height_Of_Suspension_Window/Number_Of_Iterations;
-% Height_Of_Suspension_Window = Height_Of_Suspension_Window - TopArms_Veritcal_Iteration_Step;
+
 
 
 
@@ -109,14 +104,15 @@ elseif Roll_Mode || Pitch_Mode
     TOE = -2 + 0.35;
 else
     CAMBER = -1.5;
-    TOE = -2;
+    TOE = 3.3;
 end
 
 %DEG, Static Toe at ride height
-CASTER = 5.51; %DEG, Static Caster at ride height, 5.51 Real Value
-% KINGPIN = 17.5; %DEG, Kingpin with respect to tyre rim, 17.478 Real Value
+CASTER = 5.51; %DEG, Static Caster at ride height, 5.51 REAL VALUE
+% KINGPIN = 17.5; %DEG, Kingpin with respect to tyre rim, 17.478 REAL VALUE
 KINGPIN = 10.5;
-Scrub_Radius = 0.035; %m, Scrub radius from steering axis to middle of tyre
+Scrub_Radius = 0.035; %m, Scrub radius from steering axis to middle of tyre REAL VALUE
+Scrub_Radius = 0;
 Scrub_Offset = 0; %m, DO NOT CHANGE! offset from upright to middle of rim, has no effect on KingPin
 
 
@@ -153,8 +149,7 @@ AngleBetweenBlueAndWhiteLine = Bell_CrankL_Chassis_Desired_Angle + atand((0.5*ch
 PurpleLineLength = sqrt(  (BlueLineLength^2) + (Bell_CrankL_Height^2) - 2*BlueLineLength*Bell_CrankL_Height*cosd(AngleBetweenBlueAndWhiteLine) );
 PistonL_Neutral_Displacement = PurpleLineLength - (Piston_Length);
 
-% Spring_Stiffness = 350; %LBS/IN = 61294nm REAL VALUE
-% Spring_Stiffness = 60 * 5.71015; %N/MM -> LBS/IN ROBERTO VALUE
+
 Front_Spring_Stiffness = 30000; %NM ROBERTO VALUE
 Rear_Spring_Stiffness = 40000; %NM ROBERTO VALUE
 if Travel_Mode && Motion_Ratio
@@ -186,18 +181,19 @@ OutBot_Pickup_Dist = 0.07778083697; %m REAL VALUE
 OutTieRod_Pickup_Dist = 0.02117; %m REAL VALUE
 OutTieRod_Pickup_FOR_AFT = -0.07555; %m Positive for FOR, Negative for AFT REAL VALUE
 
+OutTieRod_Pickup_Dist_BACK = 0.073325; %m REAL VALUE
+OutTieRod_Pickup_FOR_AFT_BACK = -0.052195; %m Positive for FOR, Negative for AFT REAL VALUE
+
+
+% -0.073325	-0.052195
+
 % [innertop(radius, width), innerbottom(radius, -width), outbottom(radius, -width), outtop(radius, width)]
 
 %% DRIVESHAFT
 
-% Powertrain_Inboard_CV_Joint_Offset = 0.1385; %m
-% Powertrain_Inboard_CV_Joint_Offset_Inboard_Outboard = (553.18)/2 - 41.78; %mm SOLIDWORKS/SIMSCAPE Y
-% Powertrain_Inboard_CV_Joint_Offset_Up_Down = 70.26; %mm SOLIDWORKS/SIMSCAPE Z
-% Powertrain_Inboard_CV_Joint_Offset_For_Aft = 26.17; %mm SOLIDWORKS/SIMSCAPE X
-
-Powertrain_Inboard_CV_Joint_Offset_Inboard_Outboard = (553.18)/2 - 131.76; %mm SOLIDWORKS/SIMSCAPE Y
-Powertrain_Inboard_CV_Joint_Offset_Up_Down = 79.65; %mm SOLIDWORKS/SIMSCAPE Z
-Powertrain_Inboard_CV_Joint_Offset_For_Aft = 48.62;%mm SOLIDWORKS/SIMSCAPE X 
+Powertrain_Inboard_CV_Joint_Offset_Inboard_Outboard = 152.58; %mm SOLIDWORKS/SIMSCAPE Y
+Powertrain_Inboard_CV_Joint_Offset_Up_Down = 56.88; %mm SOLIDWORKS/SIMSCAPE Z
+Powertrain_Inboard_CV_Joint_Offset_For_Aft = 47.97;%mm SOLIDWORKS/SIMSCAPE X 
 
 Powertrain_Outboard_CV_Offset_Inboard_Outboard = 31.82; %mm
 
@@ -212,37 +208,36 @@ Driveshaft_x_sec = [0 -Driveshaft_Length/2; Driveshaft_Radius -Driveshaft_Length
 Driveshaft_buffer_x_sec = [0 -Driveshaft_Length/2; Driveshaft_Radius+0.020 -Driveshaft_Length/2; Driveshaft_Radius+0.020 Driveshaft_Length/2; 0 Driveshaft_Length/2];
 
 
+Chassis_Crossbar_Radius = 0.0254/2;
+Chassis_Crossbar_x_sec = [0 -Driveshaft_Length/2;Chassis_Crossbar_Radius  -Driveshaft_Length/2;Chassis_Crossbar_Radius  Driveshaft_Length/2; 0 Driveshaft_Length/2];
+
+
+Steering_Cone_Length = Track_Width/2; %m
+Steering_Cone_x_sec = [0, 0; 0, -Steering_Cone_Length;Steering_Cone_Length*sind(5), -Steering_Cone_Length;];
+
 
 
 
 %% EXPERIMENTAL
-% outboardZ = Wheel_radius/cosd(CAMBER) - (Wheel_radius*tand(CAMBER) - Wheel_width/2)*sind(CAMBER);
-% inboardZ = chassis_height/2 + Ride_Height;
 Tyre_Floor_Plane = -abs(chassis_height/2 + Ride_Height - (Wheel_radius/cosd(CAMBER) - (Wheel_radius*tand(CAMBER) - Wheel_width/2)*sind(CAMBER)));
 
 %% ITERATION
 
-for j=Number_Of_Iterations:Number_Of_Iterations
+% for j=Number_Of_Iterations:Number_Of_Iterations
     for i=Number_Of_Iterations:Number_Of_Iterations
-        disp(string((j-1)*Number_Of_Iterations + i-1) + "/" + string(Number_Of_Iterations^2) + ", " + string(((j-1)*Number_Of_Iterations + i-1)/(Number_Of_Iterations^2)) + "%")
-        % clearvars -except Steering_Mode Travel_Mode Pitch_Mode Roll_Mode Number_Of_Iterations Iteration_Step i
+        % disp(string((j-1)*Number_Of_Iterations + i-1) + "/" + string(Number_Of_Iterations^2) + ", " + string(((j-1)*Number_Of_Iterations + i-1)/(Number_Of_Iterations^2)) + "%")
+        disp(string(i) + "/" + string(Number_Of_Iterations))
 
-        
+       
         %% VARIABLES
 
 
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        % Inboard_TopBack_Pickup_UP = TopArms_Starting_Position - Iteration_Step * (i-1); %m
-        if Roll_Center == true
-            Inboard_TopBack_Pickup_UP = TopArms_Upper_Bound - TopArms_Veritcal_Iteration_Step * (j-1); %m
-        else
-            Inboard_TopBack_Pickup_UP = TopArms_Upper_Bound - TopArms_Veritcal_Iteration_Step * (i-1); %m
-        end
+        Inboard_TopBack_Pickup_UP = TopArms_Starting_Position - 0.02 - 0.014; %Starting Position + Roll Center + Offset
         Inboard_TopBack_Pickup_AFT = Arms_FOR_AFT_Position; %m
         front_chassis_top_back_offset = tand(Plane_Pickup_Angle) * (chassis_height/2 - abs(Inboard_TopBack_Pickup_UP));
 
-        % Inboard_TopFront_Pickup_UP = TopArms_Upper_Bound - TopArms_Veritcal_Iteration_Step * (j-1);
-        Inboard_TopFront_Pickup_UP = TopArms_Upper_Bound - TopArms_Veritcal_Iteration_Step * (i-1);
+        Inboard_TopFront_Pickup_UP = TopArms_Starting_Position - 0.02 + 0.014; %Starting Position + Roll Center + Offset
         Inboard_TopFront_Pickup_FOR = Arms_FOR_AFT_Position; %m
         front_chassis_top_front_offset = tand(Plane_Pickup_Angle) * (chassis_height/2 - abs(Inboard_TopFront_Pickup_UP));
 
@@ -252,68 +247,37 @@ for j=Number_Of_Iterations:Number_Of_Iterations
         Inboard_BotFront_Pickup_DOWN = BottomArms_Dist_Limit; %m
         Inboard_BotFront_Pickup_FOR = Arms_FOR_AFT_Position; %m
 
-        TieRod_Pickup_Dist = 0.15; %m
-        TieRod_Pickup_FOR_AFT = -0.07555; %m Positive for FOR, Negative for AFT
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        % Inboard_TopBack_Pickup_UP_BACK = RearTopArms_Upper_Bound  - TopArms_Veritcal_Iteration_Step * (j-1); %m
-        % Inboard_TopBack_Pickup_UP_BACK = RearTopArms_Starting_Position; %m
-        % Inboard_TopBack_Pickup_UP_BACK = RearTopArms_Upper_Bound - TopArms_Veritcal_Iteration_Step * (j-1);
-        Inboard_TopBack_Pickup_UP_BACK = RearTopArms_Upper_Bound - TopArms_Veritcal_Iteration_Step * (i-1);
-        Inboard_TopBack_Pickup_AFT_BACK = 0.095; %m
-        % Inboard_TopBack_Pickup_AFT_BACK = 0.12; %m MINIMUM
+        TieRod_Pickup_Dist = BottomArms_Dist_Limit-0.01588; %m
+        % TieRod_Pickup_FOR_AFT = -0.0300 -(abs(-0.0300-0.1156)/Number_Of_Iterations) * (i-1); %m Positive for FOR, Negative for AFT
+        % -0.0700 Max Aft
+        % -0.0500 Max For
 
-        % Inboard_TopFront_Pickup_UP_BACK = RearTopArms_Upper_Bound  - TopArms_Veritcal_Iteration_Step * (i-1); %m
-        % Inboard_TopFront_Pickup_UP_BACK = RearTopArms_Starting_Position; %m
-        if Roll_Center == true
-            Inboard_TopFront_Pickup_UP_BACK =  RearTopArms_Upper_Bound - TopArms_Veritcal_Iteration_Step * (j-1);
-        else
-            Inboard_TopFront_Pickup_UP_BACK =  RearTopArms_Upper_Bound - TopArms_Veritcal_Iteration_Step * (i-1);
-        end
-        Inboard_TopFront_Pickup_FOR_BACK = 0.2; %m
+
+        TieRod_Pickup_FOR_AFT = -0.0700;
+            
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+        Inboard_TopBack_Pickup_UP_BACK = RearTopArms_Starting_Position - 0.02 + 0.006; %Starting Position + Roll Center + Offset
+        Inboard_TopBack_Pickup_AFT_BACK = 0.095; %m
+
+        Inboard_TopFront_Pickup_UP_BACK = RearTopArms_Starting_Position - 0.02 - 0.335*tand(3.6139); %Starting Position + Roll Center + Offset (3.6139 DEG AOA)
+        Inboard_TopFront_Pickup_FOR_BACK = 0.335; %m REAL VALUE: 0.335
 
         Inboard_BotBack_Pickup_DOWN_BACK = BottomArms_Dist_Limit; %m
         Inboard_BotBack_Pickup_AFT_BACK = 0.095; %m
 
         Inboard_BotFront_Pickup_DOWN_BACK = BottomArms_Dist_Limit; %m
-        Inboard_BotFront_Pickup_FOR_BACK = 0.2; %m
+        Inboard_BotFront_Pickup_FOR_BACK = 0.335; %m REAL VALUE: 0.335
 
         TieRod_Pickup_Dist_BACK = 0.15; %m
         TieRod_Pickup_FOR_AFT_BACK = -0.07555; %m Positive for FOR, Negative for AFT
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-        %[innertop(radius, width), innerbottom(radius, -width), outbottom(radius, -width), outtop(radius, width)]
 
         % -------------------------
 
 
   
-
-
-
-        % if Travel_Mode
-        %     CAMBER = -1.5 - 0.38; %DEG, Static Camber at ride height
-        % else
-        %     CAMBER = -1.5;
-        % end
-        % TOE = -2; %DEG, Static Toe at ride height
-        % CASTER = 5.51; %DEG, Static Caster at ride height, 5.51 Real Value
-        % KINGPIN = 10; %DEG, Kingpin with respect to tyre rim, 17.478 Real Value
-        % Scrub_Radius = 0; %m, Scrub radius from steering axis to middle of tyre
-        % Scrub_Offset = 0; %m, DO NOT CHANGE! offset from upright to middle of rim, has no effect on KingPin
-        % 
-        % 
-        % Bell_CrankL_Chassis_Desired_Angle = 15; %DEG
-        % Shock_Pickup_Height = 0.01; %m
-        % Bell_CrankL_Height = 0.08; %m
-        % Bell_CrankL_Top_Length = 0.08; %m
-        % 
-        % 
-        % Shock_Pickup_Height_BACK = 0.01; %m
-        % Bell_CrankL_Pickup_Height_BACK = -0.2; %m
-        % 
-        % 
-        % Spring_Stiffness = 350; %LBS/IN = 61294nm REAL VALUE
-        % Damping_Coefficient = 1000;
 
 
 
@@ -664,10 +628,13 @@ for j=Number_Of_Iterations:Number_Of_Iterations
 
         TieRod_Inboard_Y = chassis_width/2;
         TieRod_Outboard_Y = Track_Width/2 + ((Wheel_radius - OutTieRod_Pickup_Dist)*tand(CAMBER) - Wheel_width/2) * (cosd(CAMBER)) - OutTieRod_Pickup_FOR_AFT*sind(TOE);
+        % TieRod_Outboard_Y_BACK = Track_Width/2 + ((Wheel_radius - OutTieRod_Pickup_Dist)*tand(CAMBER) - Wheel_width/2) * (cosd(CAMBER)) - OutTieRod_Pickup_FOR_AFT*sind(TOE);
         TieRod_Delta_Y = TieRod_Outboard_Y - TieRod_Inboard_Y;
 
         TieRod_Delta_X = TieRod_Pickup_FOR_AFT - OutTieRod_Pickup_FOR_AFT*cosd(TOE);
         TieRod_Delta_X_BACK = TieRod_Pickup_FOR_AFT_BACK - OutTieRod_Pickup_FOR_AFT*cosd(TOE);
+
+        
 
         TieRod_Length = sqrt( (TieRod_Delta_X)^2 + (TieRod_Delta_Y)^2 + (TieRod_Delta_Z)^2 );
         TieRod_x_sec = [0 -TieRod_Length/2; 0.75/100 -TieRod_Length/2; 0.75/100 TieRod_Length/2; 0 TieRod_Length/2];
@@ -677,7 +644,7 @@ for j=Number_Of_Iterations:Number_Of_Iterations
 
 
         %% PITCH CENTER
-        Guideline_Center_Length = 8; %m
+        Guideline_Center_Length = 20; %m
         Guideline_x_sec = [0 -Guideline_Center_Length/2; 0.5/100 -Guideline_Center_Length/2; 0.5/100 Guideline_Center_Length/2; 0 Guideline_Center_Length/2];
         Guide_Top_Arm_Dist = sqrt( (Inboard_TopBack_Pickup_AFT + Inboard_TopFront_Pickup_FOR)^2 + (Inboard_TopBack_Pickup_UP - Inboard_TopFront_Pickup_UP)^2 );
         Guide_Top_Arm_Dist_BACK = sqrt( (Inboard_TopBack_Pickup_AFT_BACK + Inboard_TopFront_Pickup_FOR_BACK)^2 + (Inboard_TopBack_Pickup_UP_BACK - Inboard_TopFront_Pickup_UP_BACK)^2 );
@@ -711,16 +678,6 @@ for j=Number_Of_Iterations:Number_Of_Iterations
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %% SUSPENSION GEOMETREY SIMULATION %%
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-
-
-        % if Steering_Mode || Travel_Mode
-        %     simIn = Simulink.SimulationInput("SGS_3D_1"); %create object
-        % else
-        %     simIn = Simulink.SimulationInput("SGS_3D_1_4WHEEL"); %create object
-        % end
-        % set_param(bdroot, 'SimulationCommand', 'Update')
-        % out = sim(simIn); %run simulation, all results returned in "out"
 
 
         if Steering_Mode || Travel_Mode
@@ -763,34 +720,50 @@ for j=Number_Of_Iterations:Number_Of_Iterations
             steering_toe = toeOutput(steering_Time_Index_Start:steering_Time_Index_End);
             steering_caster = casterOutput(steering_Time_Index_Start:steering_Time_Index_End);
             steering_angle = steering_toe + TOE;
-            
+
+            camberOutputLEFT = out.CTCLEFT.signals(1).values;
+            toeOutputLEFT = out.CTCLEFT.signals(2).values;
+            casterOutputLEFT = out.CTCLEFT.signals(3).values;
+
+            steering_toeLEFT = toeOutputLEFT(steering_Time_Index_Start:steering_Time_Index_End);
 
 
-            Steering_Slope_Data(i,j,1) = Inboard_TopBack_Pickup_UP - TopArms_Starting_Position;
-            Steering_Slope_Data(i,j,2) = Inboard_TopFront_Pickup_UP - TopArms_Starting_Position;
-            Steering_Slope_Data(i,j,3) = (steering_camber(floorDiv(end,2)) - steering_camber(floorDiv(end,2) + 1)) / (steering_angle(floorDiv(end,2)) - steering_angle(floorDiv(end,2) + 1));
-            Steering_Slope_Data(i,j,4) = (steering_caster(floorDiv(end,2)) - steering_caster(floorDiv(end,2) + 1)) / (steering_angle(floorDiv(end,2)) - steering_angle(floorDiv(end,2) + 1));
+            % Steering_Slope_Data(i,j,1) = Inboard_TopBack_Pickup_UP - TopArms_Starting_Position;
+            % Steering_Slope_Data(i,j,2) = Inboard_TopFront_Pickup_UP - TopArms_Starting_Position;
+            % Steering_Slope_Data(i,j,3) = (steering_camber(floorDiv(end,2)) - steering_camber(floorDiv(end,2) + 1)) / (steering_angle(floorDiv(end,2)) - steering_angle(floorDiv(end,2) + 1));
+            % Steering_Slope_Data(i,j,4) = (steering_caster(floorDiv(end,2)) - steering_caster(floorDiv(end,2) + 1)) / (steering_angle(floorDiv(end,2)) - steering_angle(floorDiv(end,2) + 1));
             % Steering_Slope_Data(i,j,3) = (steering_camber(end) - steering_camber(1)) / (steering_angle(end) - steering_angle(1));
             % Steering_Slope_Data(i,j,4) = (steering_caster(end) - steering_caster(1)) / (steering_angle(end) - steering_angle(1));
 
+            XAxis = (steering_toe+steering_toeLEFT)/2;
+            YAxis = steering_toeLEFT-steering_toe;
 
             hold on
-            subplot(2,2,1)
-            plot(steering_angle, steering_camber, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
-            xline(0, '--')
-            yline(CAMBER, '--')
-            xlabel("Steering Angle")
-            ylabel("Camber")
-            % hold off
+            plot(YAxis, XAxis)
+            xlabel("Average Steering Angle")
+            ylabel("Outer-Inner")
+            xlim([-20 20])
+            % ylim([-2 0])
 
-            hold on
-            subplot(2,2,2)
-            plot(steering_angle, steering_caster, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
-            xline(0, '--')
-            yline(CASTER, '--')
-            xlabel("Steering Angle")
-            ylabel("Caster")
-            % hold off
+
+            % 
+            % hold on
+            % subplot(2,2,1)
+            % plot(steering_angle, steering_camber, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
+            % xline(0, '--')
+            % yline(CAMBER, '--')
+            % xlabel("Steering Angle")
+            % ylabel("Camber")
+            % % hold off
+            % 
+            % hold on
+            % subplot(2,2,2)
+            % plot(steering_angle, steering_caster, 'Color',[0 1-(i/Number_Of_Iterations) (i/Number_Of_Iterations)])
+            % xline(0, '--')
+            % yline(CASTER, '--')
+            % xlabel("Steering Angle")
+            % ylabel("Caster")
+            % % hold off
         end
 
 
@@ -1063,7 +1036,7 @@ for j=Number_Of_Iterations:Number_Of_Iterations
             roll_caster = casterOutput(roll_Time_Index_Start:roll_Time_Index_End);
             roll_roll = rollOutput(roll_Time_Index_Start:roll_Time_Index_End); %- 1;
             % rollCenterOutput = out.CTC.signals(8).values;
-            roll_roll_center_distance = out.CTC.signals(8).values(201);
+            roll_roll_center_distance = out.CTC.signals(8).values(101)
 
             Roll_Slope_Data(i,j,1) = Inboard_TopBack_Pickup_UP - TopArms_Starting_Position;
             Roll_Slope_Data(i,j,2) = Inboard_TopFront_Pickup_UP - TopArms_Starting_Position;
@@ -1113,153 +1086,178 @@ for j=Number_Of_Iterations:Number_Of_Iterations
 
 
     end
-end
+% end
+% 
+% if Travel_Mode
+%     % Coordinates
+%     subplot(3,3,4)
+%     surf(Travel_Slope_Data(:,:,1), Travel_Slope_Data(:,:,2), Travel_Slope_Data(:,:,3))
+%     xlabel("Back Arm Position")
+%     ylabel("Front Arm Position")
+%     zlabel("Slope of Camber vs Rideheight")
+% 
+%     subplot(3,3,5)
+%     surf(Travel_Slope_Data(:,:,1), Travel_Slope_Data(:,:,2), Travel_Slope_Data(:,:,4))
+%     xlabel("Back Arm Position")
+%     ylabel("Front Arm Position")
+%     zlabel("Slope of Caster vs Rideheight")
+% 
+%     subplot(3,3,6)
+%     surf(Travel_Slope_Data(:,:,1), Travel_Slope_Data(:,:,2), Travel_Slope_Data(:,:,5))
+%     xlabel("Back Arm Position")
+%     ylabel("Front Arm Position")
+%     zlabel("Slope of Toe vs Rideheight")
+% 
+%     Travel_Slope_Data_Height = (Travel_Slope_Data(:,:,1) + Travel_Slope_Data(:,:,2)) ./2;
+%     Travel_Slope_Data_Dive = atand((Travel_Slope_Data(:,:,1) + Travel_Slope_Data(:,:,2))/Arms_FOR_AFT_Position);
+% 
+%     % Height and Dive
+%     %% WORK IN PROGRESS
+%     subplot(3,3,7)
+%     surf(Travel_Slope_Data_Height, Travel_Slope_Data_Dive, Travel_Slope_Data(:,:,3))
+%     xlabel("Height of Arms")
+%     ylabel("Amount of Anti-Dive (Deg)")
+%     zlabel("Slope of Camber vs Rideheight")
+%     colormap winter
+% 
+%     subplot(3,3,8)
+%     surf(Travel_Slope_Data_Height, Travel_Slope_Data_Dive, Travel_Slope_Data(:,:,4))
+%     xlabel("Height of Arms")
+%     ylabel("Amount of Anti-Dive (Deg)")
+%     zlabel("Slope of Caster vs Rideheight")
+%     colormap winter
+% 
+%     subplot(3,3,9)
+%     surf(Travel_Slope_Data_Height, Travel_Slope_Data_Dive, Travel_Slope_Data(:,:,5))
+%     xlabel("Height of Arms")
+%     ylabel("Amount of Anti-Dive (Deg)")
+%     zlabel("Slope of Toe vs Rideheight")
+%     colormap winter
+% 
+% end
+% 
+% if Steering_Mode
+%     % Coordinates
+%     subplot(2,2,3)
+%     surf(Steering_Slope_Data(:,:,1), Steering_Slope_Data(:,:,2), Steering_Slope_Data(:,:,3))
+%     xlabel("Back Arm Position")
+%     ylabel("Front Arm Position")
+%     zlabel("Slope of Camber vs Steering Angle")
+%     colormap winter
+% 
+% 
+%     subplot(2,2,4)
+%     surf(Steering_Slope_Data(:,:,1), Steering_Slope_Data(:,:,2), Steering_Slope_Data(:,:,4))
+%     xlabel("Back Arm Position")
+%     ylabel("Front Arm Position")
+%     zlabel("Slope of Caster vs Steering Angle")
+%     colormap winter
+% 
+% 
+% end
+% 
+% if Pitch_Mode
+%     % Coordinates
+%     subplot(4,3,7)
+%     surf(Pitch_Slope_Data(:,:,1), Pitch_Slope_Data(:,:,2), Pitch_Slope_Data(:,:,3))
+%     xlabel("Back Arm Position")
+%     ylabel("Front Arm Position")
+%     zlabel("Slope of Camber vs Pitch")
+%     colormap winter
+% 
+%     subplot(4,3,8)
+%     surf(Pitch_Slope_Data(:,:,1), Pitch_Slope_Data(:,:,2), Pitch_Slope_Data(:,:,4))
+%     xlabel("Back Arm Position")
+%     ylabel("Front Arm Position")
+%     zlabel("Slope of Caster vs Pitch")
+%     colormap winter
+% 
+%     subplot(4,3,9)
+%     surf(Pitch_Slope_Data(:,:,1), Pitch_Slope_Data(:,:,2), Pitch_Slope_Data(:,:,5))
+%     xlabel("Back Arm Position")
+%     ylabel("Front Arm Position")
+%     zlabel("Slope of Toe vs Pitch")
+%     colormap winter
+% 
+%     subplot(4,3,10)
+%     surf(Pitch_Slope_Data(:,:,1), Pitch_Slope_Data(:,:,2), Pitch_Slope_Data(:,:,6))
+%     xlabel("Back Arm Position")
+%     ylabel("Front Arm Position")
+%     zlabel("Slope of REAR Camber vs Pitch")
+%     colormap winter
+% 
+%     subplot(4,3,11)
+%     surf(Pitch_Slope_Data(:,:,1), Pitch_Slope_Data(:,:,2), Pitch_Slope_Data(:,:,7))
+%     xlabel("Back Arm Position")
+%     ylabel("Front Arm Position")
+%     zlabel("Slope of REAR Caster vs Pitch")
+%     colormap winter
+% 
+%     subplot(4,3,12)
+%     surf(Pitch_Slope_Data(:,:,1), Pitch_Slope_Data(:,:,2), Pitch_Slope_Data(:,:,8))
+%     xlabel("Back Arm Position")
+%     ylabel("Front Arm Position")
+%     zlabel("Slope of REAR Toe vs Pitch")
+%     colormap winter
+% 
+% end
+% 
+% if Roll_Mode
+%     % Coordinates
+%     subplot(3,3,4)
+%     surf(Roll_Slope_Data(:,:,1), Roll_Slope_Data(:,:,2), Roll_Slope_Data(:,:,3))
+%     xlabel("Back Arm Position")
+%     ylabel("Front Arm Position")
+%     zlabel("Slope of Camber vs Roll")
+%     colormap winter
+% 
+%     subplot(3,3,5)
+%     surf(Roll_Slope_Data(:,:,1), Roll_Slope_Data(:,:,2), Roll_Slope_Data(:,:,4))
+%     xlabel("Back Arm Position")
+%     ylabel("Front Arm Position")
+%     zlabel("Slope of Caster vs Roll")
+%     colormap winter
+% 
+%     subplot(3,3,6)
+%     surf(Roll_Slope_Data(:,:,1), Roll_Slope_Data(:,:,2), Roll_Slope_Data(:,:,5))
+%     xlabel("Back Arm Position")
+%     ylabel("Front Arm Position")
+%     zlabel("Slope of Toe vs Roll")
+%     colormap winter
+% 
+%     subplot(3,3,8)
+%     surf(Roll_Slope_Data(:,:,1), Roll_Slope_Data(:,:,2), Roll_Slope_Data(:,:,6))
+%     xlabel("Back Arm Position")
+%     ylabel("Front Arm Position")
+%     zlabel("Roll Center Distance vs Roll")
+%     colormap winter
+% 
+% 
+% end
 
-if Travel_Mode
-    % Coordinates
-    subplot(3,3,4)
-    surf(Travel_Slope_Data(:,:,1), Travel_Slope_Data(:,:,2), Travel_Slope_Data(:,:,3))
-    xlabel("Back Arm Position")
-    ylabel("Front Arm Position")
-    zlabel("Slope of Camber vs Rideheight")
-
-    subplot(3,3,5)
-    surf(Travel_Slope_Data(:,:,1), Travel_Slope_Data(:,:,2), Travel_Slope_Data(:,:,4))
-    xlabel("Back Arm Position")
-    ylabel("Front Arm Position")
-    zlabel("Slope of Caster vs Rideheight")
-
-    subplot(3,3,6)
-    surf(Travel_Slope_Data(:,:,1), Travel_Slope_Data(:,:,2), Travel_Slope_Data(:,:,5))
-    xlabel("Back Arm Position")
-    ylabel("Front Arm Position")
-    zlabel("Slope of Toe vs Rideheight")
-
-    Travel_Slope_Data_Height = (Travel_Slope_Data(:,:,1) + Travel_Slope_Data(:,:,2)) ./2;
-    Travel_Slope_Data_Dive = atand((Travel_Slope_Data(:,:,1) + Travel_Slope_Data(:,:,2))/Arms_FOR_AFT_Position);
-
-    % Height and Dive
-    %% WORK IN PROGRESS
-    subplot(3,3,7)
-    surf(Travel_Slope_Data_Height, Travel_Slope_Data_Dive, Travel_Slope_Data(:,:,3))
-    xlabel("Height of Arms")
-    ylabel("Amount of Anti-Dive (Deg)")
-    zlabel("Slope of Camber vs Rideheight")
-    colormap winter
-
-    subplot(3,3,8)
-    surf(Travel_Slope_Data_Height, Travel_Slope_Data_Dive, Travel_Slope_Data(:,:,4))
-    xlabel("Height of Arms")
-    ylabel("Amount of Anti-Dive (Deg)")
-    zlabel("Slope of Caster vs Rideheight")
-    colormap winter
-
-    subplot(3,3,9)
-    surf(Travel_Slope_Data_Height, Travel_Slope_Data_Dive, Travel_Slope_Data(:,:,5))
-    xlabel("Height of Arms")
-    ylabel("Amount of Anti-Dive (Deg)")
-    zlabel("Slope of Toe vs Rideheight")
-    colormap winter
-
-end
-
-if Steering_Mode
-    % Coordinates
-    subplot(2,2,3)
-    surf(Steering_Slope_Data(:,:,1), Steering_Slope_Data(:,:,2), Steering_Slope_Data(:,:,3))
-    xlabel("Back Arm Position")
-    ylabel("Front Arm Position")
-    zlabel("Slope of Camber vs Steering Angle")
-    colormap winter
 
 
-    subplot(2,2,4)
-    surf(Steering_Slope_Data(:,:,1), Steering_Slope_Data(:,:,2), Steering_Slope_Data(:,:,4))
-    xlabel("Back Arm Position")
-    ylabel("Front Arm Position")
-    zlabel("Slope of Caster vs Steering Angle")
-    colormap winter
+%% Chassis Coords
+
+Chassis_Rear_SUS_Center_to_SW_Origin = [1378.62-(1675.93-1571) 279-279 524.32-1000*chassis_height/2];
+Chassis_Front_SUS_Center_to_SW_Origin = [-1675.93+1378.62+31 279-279 -1000*chassis_height/2+524.32];
+SW_Front_Origin = [266.3100 0 -524.3200];
+
+FRONT_Top_Fore_Inboard = -Chassis_Front_SUS_Center_to_SW_Origin + 1000*InBoard_TopR_PickupCOORD
+FRONT_Top_Aft_Inboard = -Chassis_Front_SUS_Center_to_SW_Origin + 1000*InBoard_TopL_PickupCOORD
+FRONT_Bot_Fore_Inboard = -Chassis_Front_SUS_Center_to_SW_Origin + 1000*InBoard_BotR_PickupCOORD
+FRONT_Bot_Aft_Inboard = -Chassis_Front_SUS_Center_to_SW_Origin + 1000*InBoard_BotL_PickupCOORD
 
 
-end
-
-if Pitch_Mode
-    % Coordinates
-    subplot(4,3,7)
-    surf(Pitch_Slope_Data(:,:,1), Pitch_Slope_Data(:,:,2), Pitch_Slope_Data(:,:,3))
-    xlabel("Back Arm Position")
-    ylabel("Front Arm Position")
-    zlabel("Slope of Camber vs Pitch")
-    colormap winter
-
-    subplot(4,3,8)
-    surf(Pitch_Slope_Data(:,:,1), Pitch_Slope_Data(:,:,2), Pitch_Slope_Data(:,:,4))
-    xlabel("Back Arm Position")
-    ylabel("Front Arm Position")
-    zlabel("Slope of Caster vs Pitch")
-    colormap winter
-
-    subplot(4,3,9)
-    surf(Pitch_Slope_Data(:,:,1), Pitch_Slope_Data(:,:,2), Pitch_Slope_Data(:,:,5))
-    xlabel("Back Arm Position")
-    ylabel("Front Arm Position")
-    zlabel("Slope of Toe vs Pitch")
-    colormap winter
-
-    subplot(4,3,10)
-    surf(Pitch_Slope_Data(:,:,1), Pitch_Slope_Data(:,:,2), Pitch_Slope_Data(:,:,6))
-    xlabel("Back Arm Position")
-    ylabel("Front Arm Position")
-    zlabel("Slope of REAR Camber vs Pitch")
-    colormap winter
-
-    subplot(4,3,11)
-    surf(Pitch_Slope_Data(:,:,1), Pitch_Slope_Data(:,:,2), Pitch_Slope_Data(:,:,7))
-    xlabel("Back Arm Position")
-    ylabel("Front Arm Position")
-    zlabel("Slope of REAR Caster vs Pitch")
-    colormap winter
-
-    subplot(4,3,12)
-    surf(Pitch_Slope_Data(:,:,1), Pitch_Slope_Data(:,:,2), Pitch_Slope_Data(:,:,8))
-    xlabel("Back Arm Position")
-    ylabel("Front Arm Position")
-    zlabel("Slope of REAR Toe vs Pitch")
-    colormap winter
-
-end
-
-if Roll_Mode
-    % Coordinates
-    subplot(3,3,4)
-    surf(Roll_Slope_Data(:,:,1), Roll_Slope_Data(:,:,2), Roll_Slope_Data(:,:,3))
-    xlabel("Back Arm Position")
-    ylabel("Front Arm Position")
-    zlabel("Slope of Camber vs Roll")
-    colormap winter
-
-    subplot(3,3,5)
-    surf(Roll_Slope_Data(:,:,1), Roll_Slope_Data(:,:,2), Roll_Slope_Data(:,:,4))
-    xlabel("Back Arm Position")
-    ylabel("Front Arm Position")
-    zlabel("Slope of Caster vs Roll")
-    colormap winter
-
-    subplot(3,3,6)
-    surf(Roll_Slope_Data(:,:,1), Roll_Slope_Data(:,:,2), Roll_Slope_Data(:,:,5))
-    xlabel("Back Arm Position")
-    ylabel("Front Arm Position")
-    zlabel("Slope of Toe vs Roll")
-    colormap winter
-
-    subplot(3,3,8)
-    surf(Roll_Slope_Data(:,:,1), Roll_Slope_Data(:,:,2), Roll_Slope_Data(:,:,6))
-    xlabel("Back Arm Position")
-    ylabel("Front Arm Position")
-    zlabel("Roll Center Distance vs Roll")
-    colormap winter
+REAR_Top_Fore_Inboard = -Chassis_Rear_SUS_Center_to_SW_Origin + 1000*InBoard_TopR_PickupCOORD_BACK + [0 chassis_rear_width_addition*1000 0]
+REAR_Top_Aft_Inboard = -Chassis_Rear_SUS_Center_to_SW_Origin + 1000*InBoard_TopL_PickupCOORD_BACK + [0 chassis_rear_width_addition*1000 0]
+REAR_Bot_Fore_Inboard = -Chassis_Rear_SUS_Center_to_SW_Origin + 1000*InBoard_BotR_PickupCOORD_BACK + [0 chassis_rear_width_addition*1000 0]
+REAR_Bot_Aft_Inboard = -Chassis_Rear_SUS_Center_to_SW_Origin + 1000*InBoard_BotL_PickupCOORD_BACK + [0 chassis_rear_width_addition*1000 0]
 
 
-end
+
+
+
+
 
 disp(":D")
