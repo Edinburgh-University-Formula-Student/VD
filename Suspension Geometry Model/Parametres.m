@@ -21,12 +21,12 @@ Motion_Ratio = false;
 Roll_Center = false;
 
 %%%%%%%%%%%%%%%%%%%%%%%
-Steering_Mode = true;
+% Steering_Mode = true;
 % Travel_Mode = true;
 % Pitch_Mode = true;
-% Roll_Mode = true;
+Roll_Mode = true;
 
-% Motion_Ratio = true;
+Motion_Ratio = true;
 % Roll_Center = true;
 %%%%%%%%%%%%%%%%%%%%%%%
 
@@ -44,11 +44,9 @@ Rear_Wheelbase = 1.01; %m
 
 
 
-if Travel_Mode && Motion_Ratio
-    Number_Of_Iterations = 1;
-else
-    Number_Of_Iterations = 4;
-end
+
+Number_Of_Iterations = 4;
+
 Iteration_Step = 0.02; %m
 
     % (:,:,1) = TopBackArm
@@ -104,26 +102,38 @@ elseif Roll_Mode || Pitch_Mode
     TOE = -2 + 0.35;
 else
     CAMBER = -1.5;
-    TOE = 3.3;
+    TOE = 1.6;
 end
+
+
 
 %DEG, Static Toe at ride height
 CASTER = 5.51; %DEG, Static Caster at ride height, 5.51 REAL VALUE
 % KINGPIN = 17.5; %DEG, Kingpin with respect to tyre rim, 17.478 REAL VALUE
 KINGPIN = 10.5;
 Scrub_Radius = 0.035; %m, Scrub radius from steering axis to middle of tyre REAL VALUE
-Scrub_Radius = 0;
+% Scrub_Radius = 0;
 Scrub_Offset = 0; %m, DO NOT CHANGE! offset from upright to middle of rim, has no effect on KingPin
 
 
 Bell_CrankL_Chassis_Desired_Angle = 15; %DEG
 Shock_Pickup_Height = 0.01; %m
 Bell_CrankL_Height = 0.08; %m
-Bell_CrankL_Top_Length = 0.08; %m
+Bell_CrankL_Top_Length = 0.037; %m
+
+
+Bell_CrankL_Internal_Angle_BACK = 90; %DEG
+Bell_CrankL_Left_Length_BACK = 0.08;
+Bell_CrankL_Right_Length_BACK = 0.06;
+Bell_CrankL_BACK = [0, 0; Bell_CrankL_Right_Length_BACK, 0; 0, Bell_CrankL_Left_Length_BACK;];
 
 
 Shock_Pickup_Height_BACK = 0.01; %m
-Bell_CrankL_Pickup_Height_BACK = -0.2; %m
+Bell_CrankL_Pickup_Height_BACK = -0.2+0.05; %m
+
+
+
+
 
 
 %% BELLCRANK & SHOCK
@@ -184,7 +194,6 @@ OutTieRod_Pickup_FOR_AFT = -0.07555; %m Positive for FOR, Negative for AFT REAL 
 OutTieRod_Pickup_Dist_BACK = 0.073325; %m REAL VALUE
 OutTieRod_Pickup_FOR_AFT_BACK = -0.052195; %m Positive for FOR, Negative for AFT REAL VALUE
 
-
 % -0.073325	-0.052195
 
 % [innertop(radius, width), innerbottom(radius, -width), outbottom(radius, -width), outtop(radius, width)]
@@ -228,13 +237,13 @@ Tyre_Floor_Plane = -abs(chassis_height/2 + Ride_Height - (Wheel_radius/cosd(CAMB
         % disp(string((j-1)*Number_Of_Iterations + i-1) + "/" + string(Number_Of_Iterations^2) + ", " + string(((j-1)*Number_Of_Iterations + i-1)/(Number_Of_Iterations^2)) + "%")
         disp(string(i) + "/" + string(Number_Of_Iterations))
 
-       
+   
         %% VARIABLES
 
 
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         Inboard_TopBack_Pickup_UP = TopArms_Starting_Position - 0.02 - 0.014; %Starting Position + Roll Center + Offset
-        Inboard_TopBack_Pickup_AFT = Arms_FOR_AFT_Position; %m
+        Inboard_TopBack_Pickup_AFT = Arms_FOR_AFT_Position + 0.020; %m
         front_chassis_top_back_offset = tand(Plane_Pickup_Angle) * (chassis_height/2 - abs(Inboard_TopBack_Pickup_UP));
 
         Inboard_TopFront_Pickup_UP = TopArms_Starting_Position - 0.02 + 0.014; %Starting Position + Roll Center + Offset
@@ -242,7 +251,7 @@ Tyre_Floor_Plane = -abs(chassis_height/2 + Ride_Height - (Wheel_radius/cosd(CAMB
         front_chassis_top_front_offset = tand(Plane_Pickup_Angle) * (chassis_height/2 - abs(Inboard_TopFront_Pickup_UP));
 
         Inboard_BotBack_Pickup_DOWN = BottomArms_Dist_Limit; %m
-        Inboard_BotBack_Pickup_AFT = Arms_FOR_AFT_Position; %m
+        Inboard_BotBack_Pickup_AFT = Arms_FOR_AFT_Position + 0.020; %m
 
         Inboard_BotFront_Pickup_DOWN = BottomArms_Dist_Limit; %m
         Inboard_BotFront_Pickup_FOR = Arms_FOR_AFT_Position; %m
@@ -254,7 +263,7 @@ Tyre_Floor_Plane = -abs(chassis_height/2 + Ride_Height - (Wheel_radius/cosd(CAMB
 
 
         TieRod_Pickup_FOR_AFT = -0.0700;
-            
+        
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
         Inboard_TopBack_Pickup_UP_BACK = RearTopArms_Starting_Position - 0.02 + 0.006; %Starting Position + Roll Center + Offset
@@ -269,8 +278,8 @@ Tyre_Floor_Plane = -abs(chassis_height/2 + Ride_Height - (Wheel_radius/cosd(CAMB
         Inboard_BotFront_Pickup_DOWN_BACK = BottomArms_Dist_Limit; %m
         Inboard_BotFront_Pickup_FOR_BACK = 0.335; %m REAL VALUE: 0.335
 
-        TieRod_Pickup_Dist_BACK = 0.15; %m
-        TieRod_Pickup_FOR_AFT_BACK = -0.07555; %m Positive for FOR, Negative for AFT
+        TieRod_Pickup_Dist_BACK = 0.1911; %m
+        TieRod_Pickup_FOR_AFT_BACK = -0.120; %m Positive for FOR, Negative for AFT
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
@@ -326,10 +335,10 @@ Tyre_Floor_Plane = -abs(chassis_height/2 + Ride_Height - (Wheel_radius/cosd(CAMB
         TieRod_PickupCOORD = [TieRod_Pickup_FOR_AFT, chassis_width/2, -TieRod_Pickup_Dist];
         TieRod_PickupCOORD_RIGHT = [-TieRod_Pickup_FOR_AFT, chassis_width/2, -TieRod_Pickup_Dist];
 
-        TieRod_PickupCOORD_BACK = [TieRod_Pickup_FOR_AFT, chassis_width/2, -TieRod_Pickup_Dist];
-        TieRod_PickupCOORD_RIGHT_BACK = [-TieRod_Pickup_FOR_AFT, chassis_width/2, -TieRod_Pickup_Dist];
+        TieRod_PickupCOORD_BACK = [TieRod_Pickup_FOR_AFT_BACK, chassis_width/2, -TieRod_Pickup_Dist_BACK];
+        TieRod_PickupCOORD_RIGHT_BACK = [-TieRod_Pickup_FOR_AFT_BACK, chassis_width/2, -TieRod_Pickup_Dist_BACK];
 
-        CrankL_PickupCOORD = [0, chassis_width/2, chassis_height/2];
+        CrankL_PickupCOORD = [0, chassis_width/2-0.02, chassis_height/2+0.02];
         ShockL_PickupCOORD = [0, 0, chassis_height/2 + Shock_Pickup_Height];
 
         CrankL_PickupCOORD_BACK = [0, chassis_width/2, chassis_height/2 + Bell_CrankL_Pickup_Height_BACK];
@@ -589,14 +598,15 @@ Tyre_Floor_Plane = -abs(chassis_height/2 + Ride_Height - (Wheel_radius/cosd(CAMB
         PurpleLinePushRod = sqrt(Bell_CrankL_Height^2 + (Bell_CrankL_Top_Length/2)^2); %m
         TealLinePushRod = PurpleLinePushRod * sind(PurpleAlpha);
         YellowLinePushRod = PurpleLinePushRod * cosd(PurpleAlpha);
-        BrownLinePushRod = Track_Width/2 - chassis_width/2 - YellowLinePushRod + BottomCamberBlueLength + OutBot_KingPin_Offset;
-        DashedPuplePushRod = Ride_Height - ((Wheel_radius - OutBot_Pickup_Dist)*(1/cosd(CAMBER)));
+        BrownLinePushRod = Track_Width/2 - chassis_width/2 - YellowLinePushRod + BottomCamberBlueLength + OutTop_KingPin_Offset;
+        DashedPuplePushRod = Ride_Height - ((Wheel_radius + OutTop_Pickup_Dist)*(1/cosd(CAMBER)));
         PushRod__2D_Length = sqrt( (chassis_height + TealLinePushRod + DashedPuplePushRod)^2 + (BrownLinePushRod)^2 );
 
-        BrownLinePushRod_BACK = Track_Width/2-chassis_rear_width_addition- chassis_width/2 - YellowLinePushRod + BottomCamberBlueLength + OutBot_KingPin_Offset;
-        PushRod__2D_Length_BACK = sqrt( (chassis_height + Bell_CrankL_Pickup_Height_BACK + TealLinePushRod + DashedPuplePushRod)^2 + (BrownLinePushRod_BACK)^2 );
+        BrownLinePushRod_BACK = Track_Width/2 - chassis_rear_width_addition - chassis_width/2 - YellowLinePushRod + BottomCamberBlueLength + OutTop_KingPin_Offset;
+        DashedPuplePushRod_BACK = Ride_Height - ((Wheel_radius + OutTop_Pickup_Dist)*(1/cosd(CAMBER)));
+        PushRod__2D_Length_BACK = sqrt( (chassis_height + Bell_CrankL_Pickup_Height_BACK + TealLinePushRod + DashedPuplePushRod_BACK)^2 + (BrownLinePushRod_BACK)^2 );
 
-        PushRod_Length = sqrt( (PushRod__2D_Length)^2 + (OutBot_Pickup_FOR_AFT)^2 ) + 0.03;
+        PushRod_Length = sqrt( (PushRod__2D_Length)^2 + (OutTop_Pickup_FOR_AFT)^2 ) + 0.03;
         PushRod_x_sec = [0 -PushRod_Length/2; 0.75/100 -PushRod_Length/2; 0.75/100 PushRod_Length/2; 0 PushRod_Length/2];
 
         PushRod_Length_BACK = sqrt( (PushRod__2D_Length_BACK)^2 + (OutBot_Pickup_FOR_AFT)^2 ) + 0.04;
@@ -618,28 +628,40 @@ Tyre_Floor_Plane = -abs(chassis_height/2 + Ride_Height - (Wheel_radius/cosd(CAMB
         % TieRod_x_sec = [0 -TieRod_Length/2; 0.75/100 -TieRod_Length/2; 0.75/100 TieRod_Length/2; 0 TieRod_Length/2];
 
         TieRod_Inboard_Z = chassis_height/2 - TieRod_Pickup_Dist + Ride_Height;
-        TieRod_Inboard_Z_BACK = chassis_height/2 - TieRod_Pickup_Dist_BACK + Ride_Height;
         TieRod_Outboard_Z = (Wheel_radius - OutTieRod_Pickup_Dist)*(1/cosd(CAMBER)) + ( (Wheel_radius - OutTieRod_Pickup_Dist)*tand(CAMBER) - Wheel_width/2 ) * sind(CAMBER);
         TieRod_Delta_Z = TieRod_Inboard_Z - TieRod_Outboard_Z;
-        TieRod_Delta_Z_BACK = TieRod_Inboard_Z_BACK - TieRod_Outboard_Z;
 
-        % TieRod_Delta_Z = OutTieRod_Pickup_Dist
-
-
+        
         TieRod_Inboard_Y = chassis_width/2;
         TieRod_Outboard_Y = Track_Width/2 + ((Wheel_radius - OutTieRod_Pickup_Dist)*tand(CAMBER) - Wheel_width/2) * (cosd(CAMBER)) - OutTieRod_Pickup_FOR_AFT*sind(TOE);
         % TieRod_Outboard_Y_BACK = Track_Width/2 + ((Wheel_radius - OutTieRod_Pickup_Dist)*tand(CAMBER) - Wheel_width/2) * (cosd(CAMBER)) - OutTieRod_Pickup_FOR_AFT*sind(TOE);
         TieRod_Delta_Y = TieRod_Outboard_Y - TieRod_Inboard_Y;
 
         TieRod_Delta_X = TieRod_Pickup_FOR_AFT - OutTieRod_Pickup_FOR_AFT*cosd(TOE);
-        TieRod_Delta_X_BACK = TieRod_Pickup_FOR_AFT_BACK - OutTieRod_Pickup_FOR_AFT*cosd(TOE);
+        % TieRod_Delta_X_BACK = TieRod_Pickup_FOR_AFT_BACK - OutTieRod_Pickup_FOR_AFT*cosd(TOE);
+
+
+        % BACKKKKKKKKKKKKKKKKKKKKKKKK
+
+
+        TieRod_Inboard_Z_BACK = chassis_height/2 - TieRod_Pickup_Dist_BACK + Ride_Height;
+        TieRod_Outboard_Z_BACK = (Wheel_radius - OutTieRod_Pickup_Dist_BACK)*(1/cosd(CAMBER)) + ( (Wheel_radius - OutTieRod_Pickup_Dist_BACK)*tand(CAMBER) - Wheel_width/2 ) * sind(CAMBER);
+        TieRod_Delta_Z_BACK = TieRod_Inboard_Z_BACK - TieRod_Outboard_Z_BACK;
+
+
+        TieRod_Inboard_Y_BACK = chassis_width/2;
+        TieRod_Outboard_Y_BACK = Track_Width/2 + ((Wheel_radius - OutTieRod_Pickup_Dist_BACK)*tand(CAMBER) - Wheel_width/2) * (cosd(CAMBER)) - OutTieRod_Pickup_FOR_AFT_BACK*sind(TOE);
+        TieRod_Delta_Y_BACK = TieRod_Outboard_Y_BACK - TieRod_Inboard_Y_BACK;
+
+
+        TieRod_Delta_X_BACK = TieRod_Pickup_FOR_AFT_BACK - OutTieRod_Pickup_FOR_AFT_BACK*cosd(TOE);
 
         
 
         TieRod_Length = sqrt( (TieRod_Delta_X)^2 + (TieRod_Delta_Y)^2 + (TieRod_Delta_Z)^2 );
         TieRod_x_sec = [0 -TieRod_Length/2; 0.75/100 -TieRod_Length/2; 0.75/100 TieRod_Length/2; 0 TieRod_Length/2];
 
-        TieRod_Length_BACK = sqrt( (TieRod_Delta_X_BACK)^2 + (TieRod_Delta_Y-chassis_rear_width_addition)^2 + (TieRod_Delta_Z_BACK)^2 );
+        TieRod_Length_BACK = sqrt( (TieRod_Delta_X_BACK)^2 + (TieRod_Delta_Y_BACK-chassis_rear_width_addition)^2 + (TieRod_Delta_Z_BACK)^2 );
         TieRod_x_sec_BACK = [0 -TieRod_Length_BACK/2; 0.75/100 -TieRod_Length_BACK/2; 0.75/100 TieRod_Length_BACK/2; 0 TieRod_Length_BACK/2];
 
 
@@ -778,10 +800,10 @@ Tyre_Floor_Plane = -abs(chassis_height/2 + Ride_Height - (Wheel_radius/cosd(CAMB
             travel_toe = toeOutput(travel_Time_Index_Start:travel_Time_Index_End);
             travel_caster = casterOutput(travel_Time_Index_Start:travel_Time_Index_End);
 
-            if Motion_Ratio
-                travel_piston = out.CTC.signals(5).values(travel_Time_Index_Start:travel_Time_Index_End);
-                Motion_Ratio_Data = (max(travel_rideheight)-min(travel_rideheight))/(max(travel_piston)-min(travel_piston));
-            end
+            % if Motion_Ratio
+            %     travel_piston = out.CTC.signals(5).values(travel_Time_Index_Start:travel_Time_Index_End);
+            %     Motion_Ratio_Data = (max(travel_rideheight)-min(travel_rideheight))/(max(travel_piston)-min(travel_piston));
+            % end
 
             
 
@@ -1036,14 +1058,14 @@ Tyre_Floor_Plane = -abs(chassis_height/2 + Ride_Height - (Wheel_radius/cosd(CAMB
             roll_caster = casterOutput(roll_Time_Index_Start:roll_Time_Index_End);
             roll_roll = rollOutput(roll_Time_Index_Start:roll_Time_Index_End); %- 1;
             % rollCenterOutput = out.CTC.signals(8).values;
-            roll_roll_center_distance = out.CTC.signals(8).values(101)
+            % roll_roll_center_distance = out.CTC.signals(8).values(101)
 
-            Roll_Slope_Data(i,j,1) = Inboard_TopBack_Pickup_UP - TopArms_Starting_Position;
-            Roll_Slope_Data(i,j,2) = Inboard_TopFront_Pickup_UP - TopArms_Starting_Position;
-            Roll_Slope_Data(i,j,3) = (roll_camber(end) - roll_camber(1)) / (roll_roll(end) - roll_roll(1));
-            Roll_Slope_Data(i,j,4) = (roll_caster(end) - roll_caster(1)) / (roll_roll(end) - roll_roll(1));
-            Roll_Slope_Data(i,j,5) = (roll_toe(end) - roll_toe(1)) / (roll_roll(end) - roll_roll(1));
-            Roll_Slope_Data(i,j,6) = roll_roll_center_distance;
+            % Roll_Slope_Data(i,j,1) = Inboard_TopBack_Pickup_UP - TopArms_Starting_Position;
+            % Roll_Slope_Data(i,j,2) = Inboard_TopFront_Pickup_UP - TopArms_Starting_Position;
+            % Roll_Slope_Data(i,j,3) = (roll_camber(end) - roll_camber(1)) / (roll_roll(end) - roll_roll(1));
+            % Roll_Slope_Data(i,j,4) = (roll_caster(end) - roll_caster(1)) / (roll_roll(end) - roll_roll(1));
+            % Roll_Slope_Data(i,j,5) = (roll_toe(end) - roll_toe(1)) / (roll_roll(end) - roll_roll(1));
+            % Roll_Slope_Data(i,j,6) = roll_roll_center_distance;
 
 
             hold on
@@ -1082,6 +1104,13 @@ Tyre_Floor_Plane = -abs(chassis_height/2 + Ride_Height - (Wheel_radius/cosd(CAMB
             % i=Number_Of_Iterations
             break
             % disp(i)
+        end
+
+        if Motion_Ratio
+                MR_piston = out.CTC.signals(8).values(221:331);
+                MR_rideheight = out.CTC.signals(9).values(221:331) + Ride_Height;
+                plot(MR_rideheight, MR_piston)
+                Motion_Ratio = (max(MR_rideheight)-min(MR_rideheight))/(max(MR_piston)-min(MR_piston))
         end
 
 
@@ -1254,7 +1283,7 @@ REAR_Top_Aft_Inboard = -Chassis_Rear_SUS_Center_to_SW_Origin + 1000*InBoard_TopL
 REAR_Bot_Fore_Inboard = -Chassis_Rear_SUS_Center_to_SW_Origin + 1000*InBoard_BotR_PickupCOORD_BACK + [0 chassis_rear_width_addition*1000 0]
 REAR_Bot_Aft_Inboard = -Chassis_Rear_SUS_Center_to_SW_Origin + 1000*InBoard_BotL_PickupCOORD_BACK + [0 chassis_rear_width_addition*1000 0]
 
-
+FRONT_Shock = -Chassis_Front_SUS_Center_to_SW_Origin + 1000*CrankL_PickupCOORD
 
 
 
