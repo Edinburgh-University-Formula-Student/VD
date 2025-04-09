@@ -123,13 +123,13 @@ Bell_CrankL_Top_Length = 0.037; %m
 
 
 Bell_CrankL_Internal_Angle_BACK = 90; %DEG
-Bell_CrankL_Left_Length_BACK = 0.08;
-Bell_CrankL_Right_Length_BACK = 0.06;
+Bell_CrankL_Left_Length_BACK = 0.07; %TO PUSHROD
+Bell_CrankL_Right_Length_BACK = 0.065; %TO SHOCK
 Bell_CrankL_BACK = [0, 0; Bell_CrankL_Right_Length_BACK, 0; 0, Bell_CrankL_Left_Length_BACK;];
 
 
-Shock_Pickup_Height_BACK = 0.01; %m
-Bell_CrankL_Pickup_Height_BACK = -0.2+0.05; %m
+Shock_Pickup_Height_BACK = 0; %Bell_CrankL_Right_Length_BACK; %m
+Bell_CrankL_Pickup_Height_BACK = -0.15; %Bell_CrankL_Right_Length_BACK+0.03; %-0.2+0.05; %m
 
 
 
@@ -602,15 +602,51 @@ Tyre_Floor_Plane = -abs(chassis_height/2 + Ride_Height - (Wheel_radius/cosd(CAMB
         DashedPuplePushRod = Ride_Height - ((Wheel_radius + OutTop_Pickup_Dist)*(1/cosd(CAMBER)));
         PushRod__2D_Length = sqrt( (chassis_height + TealLinePushRod + DashedPuplePushRod)^2 + (BrownLinePushRod)^2 );
 
-        BrownLinePushRod_BACK = Track_Width/2 - chassis_rear_width_addition - chassis_width/2 - YellowLinePushRod + BottomCamberBlueLength + OutTop_KingPin_Offset;
-        DashedPuplePushRod_BACK = Ride_Height - ((Wheel_radius + OutTop_Pickup_Dist)*(1/cosd(CAMBER)));
-        PushRod__2D_Length_BACK = sqrt( (chassis_height + Bell_CrankL_Pickup_Height_BACK + TealLinePushRod + DashedPuplePushRod_BACK)^2 + (BrownLinePushRod_BACK)^2 );
-
-        PushRod_Length = sqrt( (PushRod__2D_Length)^2 + (OutTop_Pickup_FOR_AFT)^2 ) + 0.03;
+        PushRod_Length = sqrt( (PushRod__2D_Length)^2 + (OutTop_Pickup_FOR_AFT)^2 );
         PushRod_x_sec = [0 -PushRod_Length/2; 0.75/100 -PushRod_Length/2; 0.75/100 PushRod_Length/2; 0 PushRod_Length/2];
 
-        PushRod_Length_BACK = sqrt( (PushRod__2D_Length_BACK)^2 + (OutBot_Pickup_FOR_AFT)^2 ) + 0.04;
+        % BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBACK
+
+        % BrownLinePushRod_BACK = Track_Width/2 - chassis_rear_width_addition - chassis_width/2 - YellowLinePushRod + BottomCamberBlueLength + OutTop_KingPin_Offset;
+        % DashedPuplePushRod_BACK = Ride_Height - ((Wheel_radius + OutTop_Pickup_Dist)*(1/cosd(CAMBER)));
+        % PushRod__2D_Length_BACK = sqrt( (chassis_height + Bell_CrankL_Pickup_Height_BACK + TealLinePushRod + DashedPuplePushRod_BACK)^2 + (BrownLinePushRod_BACK)^2 );
+        % 
+        % 
+        % 
+        % PushRod_Length_BACK = sqrt( (PushRod__2D_Length_BACK)^2 + (OutBot_Pickup_FOR_AFT)^2 ) + 0.04;
+        % PushRod_x_sec_BACK = [0 -PushRod_Length_BACK/2; 0.75/100 -PushRod_Length_BACK/2; 0.75/100 PushRod_Length_BACK/2; 0 PushRod_Length_BACK/2];
+
+% Bell_CrankL_Chassis_Desired_Angle = 15; %DEG
+% Shock_Pickup_Height = 0.01; %m
+% Bell_CrankL_Height = 0.08; %m
+% Bell_CrankL_Top_Length = 0.037; %m
+% 
+% 
+% Bell_CrankL_Internal_Angle_BACK = 90; %DEG
+% Bell_CrankL_Left_Length_BACK = 0.08; %TO PUSHROD
+% Bell_CrankL_Right_Length_BACK = 0.06; %TO SHOCK
+% Bell_CrankL_BACK = [0, 0; Bell_CrankL_Right_Length_BACK, 0; 0, Bell_CrankL_Left_Length_BACK;];
+% 
+% 
+% Shock_Pickup_Height_BACK = Bell_CrankL_Right_Length_BACK; %m
+% Bell_CrankL_Pickup_Height_BACK = -0.15; %Bell_CrankL_Right_Length_BACK+0.03; %-0.2+0.05; %m
+
+
+        PushRod_Inboard_Z_BACK = chassis_height/2 + Bell_CrankL_Pickup_Height_BACK;
+        PushRod_Outboard_Z_BACK = TB_OutboardZ_BACK;
+        PushRod_Delta_Z_BACK = abs(PushRod_Inboard_Z_BACK + Ride_Height - PushRod_Outboard_Z_BACK);
+
+        PushRod_Inboard_Y_BACK = chassis_width/2 + chassis_rear_width_addition + Bell_CrankL_Left_Length_BACK;
+        PushRod_Outboard_Y_BACK = OutTop_KingPin_Offset*cosd(CAMBER) - OutTop_Pickup_FOR_AFT*sind(TOE) + cosd(CAMBER)*((Wheel_radius + OutTop_Pickup_Dist) * tand(CAMBER) - Wheel_width/2);
+        PushRod_Delta_Y_BACK = Track_Width/2 - abs(PushRod_Outboard_Y_BACK - PushRod_Inboard_Y_BACK);
+
+        PushRod_Inboard_X_BACK = 0;
+        PushRod_Outboard_X_BACK = OutTop_Pickup_FOR_AFT;
+        PushRod_Delta_X_BACK = abs(PushRod_Outboard_X_BACK-PushRod_Inboard_X_BACK);
+
+        PushRod_Length_BACK = sqrt( (PushRod_Delta_X_BACK)^2 + (PushRod_Delta_Y_BACK)^2 + (PushRod_Delta_Z_BACK)^2 ) + 0.04;
         PushRod_x_sec_BACK = [0 -PushRod_Length_BACK/2; 0.75/100 -PushRod_Length_BACK/2; 0.75/100 PushRod_Length_BACK/2; 0 PushRod_Length_BACK/2];
+
 
         %% TOE & TIEROD LENGTH
         % TieRodCamberPurpleLength = sqrt( (Wheel_radius - OutTieRod_Pickup_Dist)^2 + (0.5*Wheel_width)^2 );
@@ -1272,20 +1308,21 @@ Chassis_Rear_SUS_Center_to_SW_Origin = [1378.62-(1675.93-1571) 279-279 524.32-10
 Chassis_Front_SUS_Center_to_SW_Origin = [-1675.93+1378.62+31 279-279 -1000*chassis_height/2+524.32];
 SW_Front_Origin = [266.3100 0 -524.3200];
 
-FRONT_Top_Fore_Inboard = -Chassis_Front_SUS_Center_to_SW_Origin + 1000*InBoard_TopR_PickupCOORD
-FRONT_Top_Aft_Inboard = -Chassis_Front_SUS_Center_to_SW_Origin + 1000*InBoard_TopL_PickupCOORD
-FRONT_Bot_Fore_Inboard = -Chassis_Front_SUS_Center_to_SW_Origin + 1000*InBoard_BotR_PickupCOORD
-FRONT_Bot_Aft_Inboard = -Chassis_Front_SUS_Center_to_SW_Origin + 1000*InBoard_BotL_PickupCOORD
+FRONT_Top_Fore_Inboard = -Chassis_Front_SUS_Center_to_SW_Origin + 1000*InBoard_TopR_PickupCOORD;
+FRONT_Top_Aft_Inboard = -Chassis_Front_SUS_Center_to_SW_Origin + 1000*InBoard_TopL_PickupCOORD;
+FRONT_Bot_Fore_Inboard = -Chassis_Front_SUS_Center_to_SW_Origin + 1000*InBoard_BotR_PickupCOORD;
+FRONT_Bot_Aft_Inboard = -Chassis_Front_SUS_Center_to_SW_Origin + 1000*InBoard_BotL_PickupCOORD;
 
 
-REAR_Top_Fore_Inboard = -Chassis_Rear_SUS_Center_to_SW_Origin + 1000*InBoard_TopR_PickupCOORD_BACK + [0 chassis_rear_width_addition*1000 0]
-REAR_Top_Aft_Inboard = -Chassis_Rear_SUS_Center_to_SW_Origin + 1000*InBoard_TopL_PickupCOORD_BACK + [0 chassis_rear_width_addition*1000 0]
-REAR_Bot_Fore_Inboard = -Chassis_Rear_SUS_Center_to_SW_Origin + 1000*InBoard_BotR_PickupCOORD_BACK + [0 chassis_rear_width_addition*1000 0]
-REAR_Bot_Aft_Inboard = -Chassis_Rear_SUS_Center_to_SW_Origin + 1000*InBoard_BotL_PickupCOORD_BACK + [0 chassis_rear_width_addition*1000 0]
+REAR_Top_Fore_Inboard = -Chassis_Rear_SUS_Center_to_SW_Origin + 1000*InBoard_TopR_PickupCOORD_BACK + [0 chassis_rear_width_addition*1000 0];
+REAR_Top_Aft_Inboard = -Chassis_Rear_SUS_Center_to_SW_Origin + 1000*InBoard_TopL_PickupCOORD_BACK + [0 chassis_rear_width_addition*1000 0];
+REAR_Bot_Fore_Inboard = -Chassis_Rear_SUS_Center_to_SW_Origin + 1000*InBoard_BotR_PickupCOORD_BACK + [0 chassis_rear_width_addition*1000 0];
+REAR_Bot_Aft_Inboard = -Chassis_Rear_SUS_Center_to_SW_Origin + 1000*InBoard_BotL_PickupCOORD_BACK + [0 chassis_rear_width_addition*1000 0];
 
-FRONT_Shock = -Chassis_Front_SUS_Center_to_SW_Origin + 1000*CrankL_PickupCOORD
+FRONT_Shock = -Chassis_Front_SUS_Center_to_SW_Origin + 1000*CrankL_PickupCOORD;
+REAR_Shock = -Chassis_Rear_SUS_Center_to_SW_Origin + 1000*CrankL_PickupCOORD_BACK;
 
-
+FRONT_Steer = -Chassis_Front_SUS_Center_to_SW_Origin + 1000*TieRod_PickupCOORD;
 
 
 
