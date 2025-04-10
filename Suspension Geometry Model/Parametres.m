@@ -116,17 +116,20 @@ Scrub_Radius = 0.035; %m, Scrub radius from steering axis to middle of tyre REAL
 Scrub_Offset = 0; %m, DO NOT CHANGE! offset from upright to middle of rim, has no effect on KingPin
 
 
-Bell_CrankL_Chassis_Desired_Angle = 15; %DEG
+
 Shock_Pickup_Height = 0.01; %m
 Bell_CrankL_Height = 0.08; %m
-Bell_CrankL_Top_Length = 0.037; %m
+Bell_CrankL_Top_Length = 0.04; %m
 
+Bell_CrankL = [0, 0; Bell_CrankL_Top_Length/2, Bell_CrankL_Height; -Bell_CrankL_Top_Length/2, Bell_CrankL_Height;];
+Bell_CrankL_Internal_Angle = atand((0.5*Bell_CrankL_Top_Length)/Bell_CrankL_Height);
 
 Bell_CrankL_Internal_Angle_BACK = 90; %DEG
 Bell_CrankL_Left_Length_BACK = 0.07; %TO PUSHROD
 Bell_CrankL_Right_Length_BACK = 0.065; %TO SHOCK
 Bell_CrankL_BACK = [0, 0; Bell_CrankL_Right_Length_BACK, 0; 0, Bell_CrankL_Left_Length_BACK;];
 
+Bell_CrankL_Chassis_Desired_Angle = 25; %DEG
 
 Shock_Pickup_Height_BACK = 0; %Bell_CrankL_Right_Length_BACK; %m
 Bell_CrankL_Pickup_Height_BACK = -0.15; %Bell_CrankL_Right_Length_BACK+0.03; %-0.2+0.05; %m
@@ -140,8 +143,7 @@ Bell_CrankL_Pickup_Height_BACK = -0.15; %Bell_CrankL_Right_Length_BACK+0.03; %-0
 
 % plot(A_Arm(:,1), A_Arm(:,2))
 
-Bell_CrankL = [0, 0; Bell_CrankL_Top_Length/2, Bell_CrankL_Height; -Bell_CrankL_Top_Length/2, Bell_CrankL_Height;];
-Bell_CrankL_Internal_Angle = atand((0.5*Bell_CrankL_Top_Length)/Bell_CrankL_Height);
+
 
 Inboard_Pickup_Height = chassis_height/2+Bell_CrankL_Height; %m
 Cylinder_Length = 0.15; %m
@@ -224,6 +226,7 @@ Chassis_Crossbar_x_sec = [0 -Driveshaft_Length/2;Chassis_Crossbar_Radius  -Drive
 Steering_Cone_Length = Track_Width/2; %m
 Steering_Cone_x_sec = [0, 0; 0, -Steering_Cone_Length;Steering_Cone_Length*sind(5), -Steering_Cone_Length;];
 
+[0 -0.250/2; 0.0100 -0.250/2; 0.0100 0.250/2; 0 0.250/2];
 
 
 
@@ -338,8 +341,11 @@ Tyre_Floor_Plane = -abs(chassis_height/2 + Ride_Height - (Wheel_radius/cosd(CAMB
         TieRod_PickupCOORD_BACK = [TieRod_Pickup_FOR_AFT_BACK, chassis_width/2, -TieRod_Pickup_Dist_BACK];
         TieRod_PickupCOORD_RIGHT_BACK = [-TieRod_Pickup_FOR_AFT_BACK, chassis_width/2, -TieRod_Pickup_Dist_BACK];
 
-        CrankL_PickupCOORD = [0, chassis_width/2-0.02, chassis_height/2+0.02];
-        ShockL_PickupCOORD = [0, 0, chassis_height/2 + Shock_Pickup_Height];
+        % CrankL_PickupCOORD = [0, chassis_width/2-0.02, chassis_height/2+0.02];
+        % ShockL_PickupCOORD = [0, 0, chassis_height/2 + Shock_Pickup_Height];
+        
+        ShockL_PickupCOORD = [0, 47.0800,  246.3600+20]*(1/1000);
+        CrankL_PickupCOORD = [0, 175+20,  246.3600]*(1/1000);
 
         CrankL_PickupCOORD_BACK = [0, chassis_width/2, chassis_height/2 + Bell_CrankL_Pickup_Height_BACK];
         ShockL_PickupCOORD_BACK = [0, 0, chassis_height/2 + Shock_Pickup_Height_BACK + Bell_CrankL_Pickup_Height_BACK];
@@ -1143,8 +1149,8 @@ Tyre_Floor_Plane = -abs(chassis_height/2 + Ride_Height - (Wheel_radius/cosd(CAMB
         end
 
         if Motion_Ratio
-                MR_piston = out.CTC.signals(8).values(221:331);
-                MR_rideheight = out.CTC.signals(9).values(221:331) + Ride_Height;
+                MR_piston = out.CTC.signals(8).values(151:251);
+                MR_rideheight = out.CTC.signals(9).values(151:251) + Ride_Height;
                 plot(MR_rideheight, MR_piston)
                 Motion_Ratio = (max(MR_rideheight)-min(MR_rideheight))/(max(MR_piston)-min(MR_piston))
         end
@@ -1319,11 +1325,16 @@ REAR_Top_Aft_Inboard = -Chassis_Rear_SUS_Center_to_SW_Origin + 1000*InBoard_TopL
 REAR_Bot_Fore_Inboard = -Chassis_Rear_SUS_Center_to_SW_Origin + 1000*InBoard_BotR_PickupCOORD_BACK + [0 chassis_rear_width_addition*1000 0];
 REAR_Bot_Aft_Inboard = -Chassis_Rear_SUS_Center_to_SW_Origin + 1000*InBoard_BotL_PickupCOORD_BACK + [0 chassis_rear_width_addition*1000 0];
 
-FRONT_Shock = -Chassis_Front_SUS_Center_to_SW_Origin + 1000*CrankL_PickupCOORD;
-REAR_Shock = -Chassis_Rear_SUS_Center_to_SW_Origin + 1000*CrankL_PickupCOORD_BACK;
+FRONT_BellCrank = -Chassis_Front_SUS_Center_to_SW_Origin + 1000*CrankL_PickupCOORD;
+REAR_BellCrank = -Chassis_Rear_SUS_Center_to_SW_Origin + 1000*CrankL_PickupCOORD_BACK;
+
+FRONT_Shock = -Chassis_Front_SUS_Center_to_SW_Origin + 1000*ShockL_PickupCOORD;
 
 FRONT_Steer = -Chassis_Front_SUS_Center_to_SW_Origin + 1000*TieRod_PickupCOORD;
 
+% -1*[245.57, 47.08, 70.96] + abs(Chassis_Front_SUS_Center_to_SW_Origin)
+
+abs([-35 25 0]) + [Bell_CrankL_Top_Length/2 Bell_CrankL_Height 0]*1000
 
 
 disp(":D")
