@@ -1152,7 +1152,7 @@ Tyre_Floor_Plane = -abs(chassis_height/2 + Ride_Height - (Wheel_radius/cosd(CAMB
                 MR_piston = out.CTC.signals(8).values(151:251);
                 MR_rideheight = out.CTC.signals(9).values(151:251) + Ride_Height;
                 plot(MR_rideheight, MR_piston)
-                Motion_Ratio = (max(MR_rideheight)-min(MR_rideheight))/(max(MR_piston)-min(MR_piston))
+                Motion_Ratio = (max(MR_piston)-min(MR_piston))/(max(MR_rideheight)-min(MR_rideheight))
         end
 
 
