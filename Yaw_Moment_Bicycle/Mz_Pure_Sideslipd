@@ -1,0 +1,115 @@
+function [M_z0] = Mz_Pure_Sideslipd(F_z, alpha, gamma, tire_pressure, V_cx)
+% Mz_pure_sideslipd (lat)
+% Takes in vertical load, sweep of slip angles (doubles array), inclination angle, tire
+% pressure, and longitudinal component of speed from centre of wheel
+% Update: Now accepts double input
+
+arguments (Input)
+    F_z
+    alpha double
+    gamma
+    tire_pressure
+    V_cx
+
+end
+
+arguments (Output)
+M_z0 double
+end
+% Add path manually from laptop
+addpath('C:\Users\User\OneDrive\Desktop\YAW\scripts') 
+load('TyreData.mat')
+
+% Load TIR file as starting point to fit data
+tire = mfeval.readTIR('16x7.5-10-7.tir');
+
+
+% Implement for turnslips (zetas)
+zeta0 = 1;
+zeta2 = 1;
+zeta5 = 1;
+zeta6 = 1;
+zeta7 = 1;
+zeta8 = 1;
+
+% (4. E3)
+V_cy     = -V_cx.*tan(alpha);
+sgnV_cx  = sign(V_cx);
+alphaAst = tan(alpha).*sgnV_cx;
+
+% (4. E6a)
+V_c = sqrt(V_cx.^2 + V_cy.^2);
+V_c = V_c + eps(V_c);
+
+% (4. E6)
+alphaCos = V_cx./V_c; 
+
+% (4. E4)
+gammaAst    = sin(gamma);
+gammaAst2   = gammaAst.^2;
+gammaAstAbs = abs(gammaAst);
+
+[F_y0, ~, df_z, F_z01, dpi, B_y, C_y, ~, ~, Kya_, SVy, SHy] = ...
+    Fy_Pure_Lat(F_z, alpha, gamma, tire_pressure);
+
+df_z2 = df_z.^2;
+R_0 = tire.UNLOADED_RADIUS;
+
+% (4. E28), (4. E39)
+SHf = SHy + SVy./Kya_;
+
+% (4. E35)
+SHt = tire.QHZ1 + tire.QHZ2.*df_z + (tire.QHZ3 + tire.QHZ4.*df_z).*gammaAst;
+
+% (4. E34)
+alpha_t = alphaAst + SHt;
+
+% (4. E37)
+alpha_r = alphaAst + SHf; 
+
+% (4. E42)
+D_t0 = F_z.*(R_0./F_z01).*(tire.QDZ1 + tire.QDZ2.*df_z).*(1-tire.PPZ1.*...
+    dpi).*tire.LTR.*sgnV_cx;
+
+% (4. E40)
+B_t = (tire.QBZ1 + tire.QBZ2.*df_z + tire.QBZ3.*df_z2)...
+    .*(1 + tire.QBZ4.*gammaAst + tire.QBZ5.*gammaAstAbs)...
+    .*tire.LKY./tire.LMUY;
+
+% (4. E41)
+C_t = tire.QCZ1;
+
+% (4. E43)
+D_t = D_t0.*(1 + tire.QDZ3.*gammaAstAbs + tire.QDZ4.*gammaAst2).*zeta5;
+
+% (4. E44)
+E_t = (tire.QEZ1 + tire.QEZ2.*df_z + tire.QEZ3.*df_z2)...
+    .*(1 + (tire.QEZ4 + tire.QEZ5.*gammaAst).*(2/pi).*atan(B_t.*C_t.*alpha_t));
+
+% (4. E45)
+B_r = (tire.QBZ9.*tire.LKY./tire.LMUY + tire.QBZ10.*B_y.*C_y).*zeta6;
+
+% (4. E46)
+C_r = zeta7;
+
+% (4. E47)
+D_r = F_z.*R_0.*((tire.QDZ6 + tire.QDZ7.*df_z).*tire.LRES.*zeta2...
+    +((tire.QDZ8 + tire.QDZ9.*df_z).*(1 + tire.PPZ2.*dpi)...
+    +(tire.QDZ10 + tire.QDZ11.*df_z).*gammaAstAbs).*gammaAst...
+    .*tire.LKZC.*zeta0).*tire.LMUY.*sgnV_cx.*alphaCos + zeta8 - 1;
+
+% (4. E33)
+t_0 = D_t.*cos(C_t.*atan(B_t.*alpha_t - E_t.*(B_t.*alpha_t ...
+    - atan(B_t.*alpha_t)))).*alphaCos;
+
+% (4. E32)
+Mz0_ = -t_0.*F_y0;
+
+% (4. E36)
+M_zr0 = D_r.*cos(C_r.*atan(B_r.*alpha_r)).*alphaCos;
+
+% (4. E31)
+M_z0 = Mz0_ + M_zr0;
+
+end
+
