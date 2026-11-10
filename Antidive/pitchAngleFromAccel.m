@@ -24,7 +24,7 @@ function results = pitchCalc(p, gForce, verbose)
 %       motionRatioFront / motionRatioRear
 %
 %     Motion ratio convention (optional field mrDefinition):
-%       'wheelOverSpring' (default, as in the chapter):
+%       'wheelOverSpring' :
 %               MR = wheel travel / spring travel,  wheel rate = spring rate / MR^2
 %       'springOverWheel':
 %               MR = spring travel / wheel travel,  wheel rate = spring rate * MR^2
@@ -219,26 +219,30 @@ function f = getPercentFraction(p, name)
     f = value / 100;
 end
 
+% -------------  EXAMPLE CALL  --------------
 
 % ---- Vehicle values ----
-p.massCar          = 280;
-p.frontWeight      = 280 * 9.81 * 0.4862;
-p.rearWeight       = 280 * 9.81 * 0.5138;
-p.cogHeight        = 0.2232;
-p.wheelbase        = 1.540;
+% p.massCar          = 280;
+% p.frontWeight      = 280 * 9.81 * 0.4862;
+% p.rearWeight       = 280 * 9.81 * 0.5138;
+% p.cogHeight        = 0.2232;
+% p.wheelbase        = 1.540;
 
-p.springRateFront  = 52000;
-p.springRateRear   = 52000;
-p.motionRatioFront = 0.67;
-p.motionRatioRear  = 0.71;
-p.mrDefinition     = 'springOverWheel';
+% p.springRateFront  = 52000;
+% p.springRateRear   = 52000;
+% p.motionRatioFront = 0.67;
+% p.motionRatioRear  = 0.71;
+% p.mrDefinition     = 'springOverWheel';
 
-p.tyreRateFront    = 200000;
-p.tyreRateRear     = 200000;
+% p.tyreRateFront    = 200000;
+% p.tyreRateRear     = 200000;
 
-p.antiDive         = 14.48;
-p.antiSquat        = 14.48;
+% p.antiDive         = 14.48;
+% p.antiSquat        = 14.48;
 
 % ---- Runs ----
-rTraction = pitchCalc(p, 1.5);
-rBraking  = pitchCalc(p, -1.5);
+% rTraction = pitchCalc(p, 1.5);
+% rBraking  = pitchCalc(p, -1.5);
+
+% ---- Without print (verbose set to =False)
+% theta = pitchCalc(p, 1.5, false).thetaDeg;
