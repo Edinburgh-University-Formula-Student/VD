@@ -1,0 +1,111 @@
+function [F_y0, Mu_y, df_z,F_z01, dpi, B_y,C_y,E_y,D_y,Kya_,SVy,SHy] = Fy_Pure_Lat(F_z, alpha, gamma, tire_pressure)
+% Fy_Pure_Lat
+% Takes in vertical force, a sweep of slip angles (alpha), an inclination
+% angle (gamma), and a particular tire pressure
+% Pure sideslip 
+arguments (Input)
+    F_z
+    alpha
+    gamma
+    tire_pressure
+    
+end
+
+arguments (Output)
+    F_y0
+    Mu_y
+    df_z
+    F_z01
+    dpi 
+    B_y
+    C_y
+    E_y
+    D_y
+    Kya_
+    SVy
+    SHy
+    
+end
+% Add path manually from laptop
+addpath('C:\Users\User\OneDrive\Desktop\YAW\scripts') 
+load('TyreData.mat')
+
+% Load TIR file as starting point to fit data
+tire = mfeval.readTIR('16x7.5-10-7.tir');
+
+% Scaling parameters
+LFZO  = tire.LFZO;         % Scaling factor for nominal load
+
+% Parameters
+F_z0  = tire.FNOMIN;       % Nominal load [N]
+p_nom = tire.NOMPRES;      % Nominal tire pressure [Pa]
+F_z01 = LFZO.*F_z0;        % Different nominal load [N]
+df_z  = (F_z-F_z01)/F_z01; % Normalised change in vertical load
+
+% ZETAS (turnslip)
+zeta0 = 1;
+zeta2 = 1;
+zeta3 = 1; 
+zeta4 = 1;
+
+% (4. E4)
+gammaAst = sin(gamma);
+gammaAst2 = gammaAst.^2; 
+
+% (4. E2b)
+dpi = (tire_pressure-p_nom)/p_nom; 
+dpi2 = dpi.^2;
+
+% (4. E21)
+C_y = tire.LCY.*tire.PCY1;
+
+% (4. E23)
+Mu_y = (tire.PDY1 + tire.PDY2.*df_z).*(1+tire.PPY3.*dpi+tire.PPY4.*dpi2)...
+    .*(1 - tire.PDY3.*gammaAst2).*tire.LMUY;
+
+% (4. E22)
+D_y = Mu_y.*F_z.*zeta2;
+
+% (4. E25)
+K_ya = tire.PKY1.*F_z01...
+    .*(1 + tire.PPY1.*dpi)...
+    .*(1-tire.PKY3.*abs(gammaAst))...
+    .*sin(tire.PKY4.*atan(F_z./F_z01./(tire.PKY2+tire.PKY5.*gammaAst2)...
+    .*(1+tire.PPY2.*dpi))).*tire.LKY.*zeta3;
+
+% (4. E39)
+signKya = sign(K_ya); 
+signKya(~signKya) = 1;
+Kya_ = K_ya + eps(K_ya).*signKya;
+
+
+% (4. E28)
+SVyg = zeta2.*tire.LKYC.*tire.LMUY.*F_z.*(tire.PVY3+tire.PVY4.*df_z).*gammaAst;
+
+% (4. E30)
+Kyg0 = F_z.*(tire.PKY6+tire.PKY7.*df_z).*(1+tire.PPY5.*dpi).*tire.LKYC;
+
+% (4. E29)
+SVy = zeta2.* tire.LMUY.*tire.LVY.*F_z.*(tire.PVY1+tire.PVY2.*df_z) + SVyg;
+
+% (4. E27)
+SHy = tire.LHY.*(tire.PHY1 + tire.PHY2.*df_z) + (Kyg0.*gammaAst-SVyg)./K_ya.*zeta0+zeta4-1;
+
+% (4. E20)
+alpha_y = alpha + SHy;
+alpha_ySgn = sign(alpha_y);
+
+% (4. E24)
+E_y = (tire.PEY1 + tire.PEY2.*df_z)...
+    .*(1 + tire.PEY5.*gammaAst.^2 - (tire.PEY3+tire.PEY4.*gammaAst).*alpha_ySgn).*tire.LEY;
+
+% (4. E26)
+signC_y = sign(C_y);
+signC_y(~signC_y) = 1;
+B_y = K_ya./(C_y.*D_y + eps(C_y).*signC_y);
+
+% (4. E19)
+F_y0 = D_y.*sin(C_y.*atan(B_y.*alpha_y - E_y.*(B_y.*alpha_y - atan(B_y.*alpha_y)))) + SVy;
+
+
+end
