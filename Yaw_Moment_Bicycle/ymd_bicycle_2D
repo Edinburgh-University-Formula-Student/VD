@@ -1,0 +1,98 @@
+% Draft 2D: limiting number of sweeps for beta and delta to improve speed
+% or processing
+% Works now. 
+% Marcel Dziuba
+% 10/11/2026
+
+clear; clc; close all
+addpath('C:\Users\User\OneDrive\Desktop\YAW\scripts')
+
+% 1. Vehicle Parameters
+g     = 9.81;                % Gravitational acceleration [m/s^2]
+m     = 288;                 % Mass of car (with driver) [kg]
+L     = 1.54;                % Wheelbase [m]
+wd_f  = 0.4862;              % Front weight distribution 
+wd_r  = 0.498;               % Rear weight distribution
+wd    = wd_f + wd_r;         % Total weight distribution
+a     = (wd_r / wd) * L;     % Distance from CG to front axle [m]
+b     = (wd_f / wd) * L;     % Distance from CG to rear axle [m]
+vx    = 10;                  % Longitudinal velocity [m/s]
+Izz   = m * L^2 / 2;         % Moment of inertia [kg*m^2]
+tp    = 83000;               % Tire pressure [Pa]
+gamma = 0;                   % Tire inclination angle [rad]
+F_zf  = (wd_r / wd) * m * g; % Vertical front load [N]
+F_zr  = (wd_f / wd) * m * g; % Vertical rear load [N]
+
+delta_max = 14; % Maximum steering input [deg]
+beta_max  = 14; % Maximum vehicle slip [deg] 
+
+% 2. Generate Forces and Moments
+i = 0;
+j = 0;
+
+for delta = -delta_max:2:delta_max
+    i = i + 1;
+    j = 0;
+
+    for beta = -beta_max:2:beta_max
+        j = j + 1;
+        w(i,j) = 0;
+        A_yg(i,j) = 0;
+
+        for k = 1:5
+            alpha_f(i,j) = w(i,j)*a/vx + deg2rad(beta) - deg2rad(delta)
+            if alpha_f(i,j) > deg2rad(15)
+                alpha_f(i,j) = deg2rad(15)
+            elseif alpha_f(i,j) < -deg2rad(15)
+                alpha_f(i,j) = -deg2rad(15)
+            end
+
+            alpha_r(i,j) = deg2rad(beta) - (w(i,j) * b) / vx
+            if alpha_r(i,j) > deg2rad(15)
+                alpha_r(i,j) = deg2rad(15)
+            elseif alpha_r(i,j) < -deg2rad(15)
+                alpha_r(i,j) = -deg2rad(15)
+            end
+
+            % Functions for Fy and Mz (doubles input)
+            F_yf(i,j) = Fy_Pure_Latd(F_zf, alpha_f(i,j), gamma, tp)
+            F_yr(i,j) = Fy_Pure_Latd(F_zr, alpha_r(i,j), gamma, tp)
+            M_zf(i,j) = Mz_Pure_Sideslipd(F_zf,alpha_f(i,j),gamma,tp,vx)
+            M_zr(i,j) = Mz_Pure_Sideslipd(F_zr,alpha_r(i,j),gamma,tp,vx)
+
+            % Total Fy and Mz
+            total_Fy(i,j) = F_yf(i,j) * cosd(delta) + F_yr(i,j)
+            total_Mz(i,j) = F_yf(i,j) * cosd(delta) * a - b * F_yr(i,j) ...
+                + M_zf(i,j) + M_zr(i,j)
+
+            % Normalised quantities for YMD axes
+            A_yg(i,j)       = total_Fy(i,j) / (m * g)
+            M_zn(i,j)       = total_Mz(i,j) / (m * g * L)
+            yawAccel(i,j)   = M_zn(i,j) / Izz
+            w(i,j)          = A_yg(i,j) / vx
+            delta_save(i,j) = delta
+            beta_save(i,j)  = beta
+        end
+    end
+end
+
+[M,N] = size(M_zn);
+delta = -delta_max:2:delta_max;
+beta  = -beta_max:2:beta_max;
+
+% 3. Plot Normalised Yaw Moment v Lateral Accelerations
+figure
+for i = 1:N
+    plot(A_yg(:, i), M_zn(:, i))
+    hold on
+end
+for i = 1:M
+    plot(A_yg(i, :), M_zn(i, :))
+    hold on
+end
+
+legendCell_beta  = cellstr(num2str(beta', 'beta=%-d'));
+legendCell_delta = cellstr(num2str(delta', 'delta=%-d'));
+legend([legendCell_beta; legendCell_delta], 'NumColumns', 2)
+xlabel('Lateral Acceleration [gs]')
+ylabel('Normalised Yaw Moment [M_z / (m * g * L)]')
