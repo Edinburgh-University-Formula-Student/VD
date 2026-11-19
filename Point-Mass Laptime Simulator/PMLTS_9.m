@@ -1,3 +1,20 @@
+nr = numel(r);
+scale_factor = 1000/nr;
+scaledX = X.*scale_factor;
+scaledY = Y.*scale_factor;
+scaledZ = Z.*scale_factor;
+sanity_check = sqrt(diff(scaledX(:)).^2 + diff(scaledY(:)).^2 + diff(scaledZ(:)).^2);
+l_new = sum(sanity_check);
+r_new = r.*(1/scale_factor);
+track = 1 ./ r_new;
+track = track.';
+track = abs(track);
+small_apex = r_new(apex);
+apexX = scaledX(apex);
+apexY = scaledY(apex);
+apexZ = scaledZ(apex);
+deltaX = 1 * scale_factor;
+
 %% University of Edinburgh Formula Student
 % Point-Mass Laptime Simulator
 % Paul Wang, Vehicle Dynamics
@@ -190,17 +207,6 @@ set(get(cbar,'Title'),'String','Speed [m/s]')
 % _________________________________________________________________________
 
 
-
-
-
-
-
-
-
-
-
-
-
 % -------------------------------------------------------------------------
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%% Competition Simulator %%%%%%%%%%%%%%%%%%%%%%%%%
@@ -287,13 +293,14 @@ for eventNumber=1:length(events)
 
             top_speed = 100; % Practical top speed setting
 
-            if GGVdecIndex >= top_speed % If top speed is exceeded, stop acceleration
-                axDec = 0;
-                ayDec = 0;
-            else % Gets the Acceleration from the GGV Plot
-                axDec = abs(GGV(GGVdecIndex, LongitudinalDecel, 1));
-                ayDec = abs(GGV(GGVdecIndex, LateralIndexPositive, 2));
-            end
+
+            
+           GGVdecIndex = min(GGVdecIndex, length(v));
+GGVaccIndex = min(GGVaccIndex, length(v));
+axDec = abs(GGV(GGVdecIndex, LongitudinalDecel, 1));
+ayDec = abs(GGV(GGVdecIndex, LateralIndexPositive, 2));
+axAcc = abs(GGV(GGVaccIndex, LongitudinalAccel, 1));
+ayAcc = abs(GGV(GGVaccIndex, LateralIndexPositive, 2));
             GGVaccIndex = min(GGVaccIndex, size(GGV,1)); 
             axAcc = GGV(GGVaccIndex, LongitudinalAccel, 1);
             ayAcc = abs(GGV(GGVaccIndex, LateralIndexPositive, 2));
